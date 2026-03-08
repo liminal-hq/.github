@@ -33,4 +33,4 @@ Liminal HQ is an independent studio building local-first software for calm, dura
 
 ## Organisation Infrastructure
 
-Shared CI and cross-repo automation live in [`.github`](https://github.com/liminal-hq/.github), including org-level image pipelines and migration tracking.
+Shared CI and cross-repo automation live in [`.github`](https://github.com/liminal-hq/.github), including org-level image pipelines and reusable workflow tooling.
