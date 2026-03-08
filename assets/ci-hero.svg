@@ -28,11 +28,11 @@
   </g>
 
   <g filter="url(#glow)">
-    <rect x="80" y="80" width="240" height="120" rx="14" fill="#0f2b57" stroke="#6ee7ff"/>
+    <rect x="80" y="80" width="226" height="120" rx="14" fill="#0f2b57" stroke="#6ee7ff"/>
     <text x="102" y="124" fill="#d9faff" font-size="26" font-family="monospace">desktop</text>
     <text x="102" y="156" fill="#8cc7ff" font-size="16" font-family="monospace">linux/amd64 + arm64</text>
 
-    <rect x="80" y="210" width="240" height="52" rx="12" fill="#0f2b57" stroke="#7df9d6"/>
+    <rect x="80" y="210" width="226" height="52" rx="12" fill="#0f2b57" stroke="#7df9d6"/>
     <text x="102" y="242" fill="#d9faff" font-size="24" font-family="monospace">mobile</text>
 
     <rect x="850" y="110" width="300" height="110" rx="14" fill="#0f2b57" stroke="#ffd58a"/>
@@ -41,12 +41,12 @@
   </g>
 
   <g>
-    <path id="beam-top" d="M320 140 C520 140, 660 160, 815 160" stroke="url(#beam)" stroke-width="10" fill="none"/>
-    <path id="beam-bottom" d="M320 236 C520 230, 660 210, 815 190" stroke="url(#beam)" stroke-width="8" fill="none"/>
+    <path id="beam-top" d="M314 140 C520 140, 660 160, 815 160" stroke="url(#beam)" stroke-width="10" fill="none"/>
+    <path id="beam-bottom" d="M314 236 C520 230, 660 210, 815 190" stroke="url(#beam)" stroke-width="8" fill="none"/>
 
     <g>
       <rect x="-34" y="-8" width="68" height="16" rx="8" fill="#6ee7ff">
-        <animateMotion dur="5s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.5;1" calcMode="linear">
+        <animateMotion dur="5s" repeatCount="indefinite" keyPoints="0.18;1;0.18" keyTimes="0;0.5;1" calcMode="linear">
           <mpath href="#beam-top"/>
         </animateMotion>
       </rect>
@@ -54,7 +54,7 @@
 
     <g>
       <rect x="-28" y="-7" width="56" height="14" rx="7" fill="#7df9d6">
-        <animateMotion dur="4.3s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.5;1" calcMode="linear">
+        <animateMotion dur="4.3s" repeatCount="indefinite" keyPoints="0.18;1;0.18" keyTimes="0;0.5;1" calcMode="linear">
           <mpath href="#beam-bottom"/>
         </animateMotion>
       </rect>
