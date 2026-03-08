@@ -35,9 +35,9 @@
     <rect x="80" y="210" width="210" height="52" rx="12" fill="#0f2b57" stroke="#7df9d6"/>
     <text x="102" y="242" fill="#d9faff" font-size="24" font-family="monospace">mobile</text>
 
-    <rect x="920" y="110" width="210" height="110" rx="14" fill="#0f2b57" stroke="#ffd58a"/>
-    <text x="944" y="150" fill="#fff2d1" font-size="22" font-family="monospace">repo CI</text>
-    <text x="944" y="178" fill="#ffd58a" font-size="15" font-family="monospace">threshold / notes / plugins</text>
+    <rect x="850" y="110" width="300" height="110" rx="14" fill="#0f2b57" stroke="#ffd58a"/>
+    <text x="878" y="150" fill="#fff2d1" font-size="22" font-family="monospace">repo CI</text>
+    <text x="878" y="178" fill="#ffd58a" font-size="14" font-family="monospace">threshold / notes / plugins</text>
   </g>
 
   <g>
