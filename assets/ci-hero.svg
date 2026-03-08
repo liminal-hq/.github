@@ -41,15 +41,15 @@
   </g>
 
   <g>
-    <path d="M300 140 C520 140, 700 160, 920 160" stroke="url(#beam)" stroke-width="10" fill="none"/>
-    <path d="M300 235 C520 230, 700 210, 920 190" stroke="url(#beam)" stroke-width="8" fill="none"/>
+    <path d="M300 140 C510 140, 660 160, 840 160" stroke="url(#beam)" stroke-width="10" fill="none"/>
+    <path d="M300 235 C510 230, 660 210, 840 190" stroke="url(#beam)" stroke-width="8" fill="none"/>
 
     <rect x="270" y="132" width="80" height="16" rx="8" fill="#6ee7ff">
-      <animate attributeName="x" values="270;860;270" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="x" values="270;760;270" dur="5s" repeatCount="indefinite"/>
     </rect>
 
     <rect x="290" y="227" width="64" height="14" rx="7" fill="#7df9d6">
-      <animate attributeName="x" values="290;850;290" dur="4.3s" repeatCount="indefinite"/>
+      <animate attributeName="x" values="290;730;290" dur="4.3s" repeatCount="indefinite"/>
     </rect>
   </g>
 

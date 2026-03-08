@@ -18,13 +18,13 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 
 ## Repositories in Scope
 
-- `liminal-hq/tauri-plugins-workspace`
-- `liminal-hq/threshold`
-- `ScottMorris/liminal-notes`
+- [`liminal-hq/tauri-plugins-workspace`](https://github.com/liminal-hq/tauri-plugins-workspace)
+- [`liminal-hq/threshold`](https://github.com/liminal-hq/threshold)
+- [`ScottMorris/liminal-notes`](https://github.com/ScottMorris/liminal-notes)
 
 ## Onboarding Links
 
-- Image publish workflow: `.github/workflows/shared-tauri-ci-images.yml`
-- Shared Dockerfile: `docker/ci/Dockerfile`
-- Publish and rollback runbook: `docs/runbooks/image-publish-and-rollback.md`
-- Cross-repo tracking: `docs/tracking/cross-repo-ci-alignment.md`
+- Image publish workflow: [`.github/workflows/shared-tauri-ci-images.yml`](https://github.com/liminal-hq/.github/blob/main/.github/workflows/shared-tauri-ci-images.yml)
+- Shared Dockerfile: [`docker/ci/Dockerfile`](https://github.com/liminal-hq/.github/blob/main/docker/ci/Dockerfile)
+- Publish and rollback runbook: [`docs/runbooks/image-publish-and-rollback.md`](https://github.com/liminal-hq/.github/blob/main/docs/runbooks/image-publish-and-rollback.md)
+- Cross-repo tracking: [`docs/tracking/cross-repo-ci-alignment.md`](https://github.com/liminal-hq/.github/blob/main/docs/tracking/cross-repo-ci-alignment.md)
