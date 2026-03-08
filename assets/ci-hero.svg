@@ -46,7 +46,7 @@
 
     <g>
       <rect x="-34" y="-8" width="68" height="16" rx="8" fill="#6ee7ff">
-        <animateMotion dur="5s" repeatCount="indefinite" keyPoints="0.18;1;0.18" keyTimes="0;0.5;1" calcMode="linear">
+        <animateMotion dur="5s" repeatCount="indefinite" keyPoints="0.08;1;0.08" keyTimes="0;0.5;1" calcMode="linear">
           <mpath href="#beam-top"/>
         </animateMotion>
       </rect>
@@ -54,7 +54,7 @@
 
     <g>
       <rect x="-28" y="-7" width="56" height="14" rx="7" fill="#7df9d6">
-        <animateMotion dur="4.3s" repeatCount="indefinite" keyPoints="0.18;1;0.18" keyTimes="0;0.5;1" calcMode="linear">
+        <animateMotion dur="4.3s" repeatCount="indefinite" keyPoints="0.08;1;0.08" keyTimes="0;0.5;1" calcMode="linear">
           <mpath href="#beam-bottom"/>
         </animateMotion>
       </rect>
