@@ -6,13 +6,15 @@
 - [x] Wave 1: Shared image production in `liminal-hq/.github`
 - [ ] Wave 2: `tauri-plugins-workspace` migration
 - [ ] Wave 3: `threshold` migration
-- [ ] Wave 4: `liminal-notes` migration
-- [ ] Wave 5: Cross-repo normalisation
+- [ ] Wave 4: `emoji-nook` migration
+- [ ] Wave 5: `liminal-notes` migration
+- [ ] Wave 6: Cross-repo normalisation
 
 ## Repositories
 
 - [ ] `liminal-hq/tauri-plugins-workspace`
 - [ ] `liminal-hq/threshold`
+- [ ] `liminal-hq/emoji-nook`
 - [ ] `ScottMorris/liminal-notes`
 
 ## Monthly Alignment Notes
