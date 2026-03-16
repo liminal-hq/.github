@@ -14,6 +14,17 @@ This repository publishes two related Tauri image families:
 | `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | Desktop devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-mobile` | `dev-mobile` | Android/mobile devcontainers |
 
+## Platform Coverage
+
+| Image | Platforms | Notes |
+| --- | --- | --- |
+| `ghcr.io/liminal-hq/tauri-ci-desktop` | `linux/amd64`, `linux/arm64` | Multi-arch because downstream Linux desktop release jobs already run on both x64 and ARM runners. |
+| `ghcr.io/liminal-hq/tauri-ci-mobile` | `linux/amd64` | ARM is not part of the current shared mobile CI contract. |
+| `ghcr.io/liminal-hq/tauri-dev-desktop` | `linux/amd64` | Devcontainer ARM support is a possible follow-up, not a current baseline. |
+| `ghcr.io/liminal-hq/tauri-dev-mobile` | `linux/amd64` | Devcontainer ARM support is a possible follow-up, not a current baseline. |
+
+Only the desktop CI image is multi-arch today. Consumers that need Linux ARM should use `tauri-ci-desktop` and should not assume ARM variants exist for the mobile or dev image families.
+
 ## Design Intent
 
 ### CI Images
@@ -61,6 +72,7 @@ Every published image should be smoke-validated for:
 - Android tooling on mobile images
 - writable user-home paths on dev images
 - expected environment variables for the image family
+- expected platform coverage for the image family, especially the `linux/arm64` variant on `tauri-ci-desktop`
 
 ## Related Docs
 

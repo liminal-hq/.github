@@ -20,6 +20,8 @@ Published image set:
 | `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | Desktop devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-mobile` | `dev-mobile` | Android/mobile devcontainers |
 
+The platform contract is intentionally asymmetric today: `tauri-ci-desktop` publishes both `linux/amd64` and `linux/arm64`, while the mobile and dev image families currently publish `linux/amd64` only.
+
 ## Design Goals
 
 1. Keep the CI image family stable for current consumers.
@@ -149,7 +151,9 @@ Initial expected platform coverage:
 | `tauri-dev-desktop` | `linux/amd64` |
 | `tauri-dev-mobile` | `linux/amd64` |
 
-If multi-arch dev images become necessary later, that should be treated as an explicit follow-up rather than assumed by default.
+The `linux/arm64` desktop CI variant is required by downstream Linux ARM release jobs that run on `ubuntu-24.04-arm`.
+
+If multi-arch dev images or mobile images become necessary later, that should be treated as an explicit follow-up rather than assumed by default.
 
 ## Smoke Validation Contract
 

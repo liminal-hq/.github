@@ -17,6 +17,15 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 - `ghcr.io/liminal-hq/tauri-dev-desktop`
 - `ghcr.io/liminal-hq/tauri-dev-mobile`
 
+## Platform Support
+
+- `tauri-ci-desktop` publishes `linux/amd64` and `linux/arm64`.
+- `tauri-ci-mobile` currently publishes `linux/amd64` only.
+- `tauri-dev-desktop` currently publishes `linux/amd64` only.
+- `tauri-dev-mobile` currently publishes `linux/amd64` only.
+
+The ARM variant exists today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release jobs that consume `tauri-ci-desktop`.
+
 ## Image Families
 
 - CI images are for GitHub Actions and other automated pipelines that want a lean, root-friendly toolchain baseline.
