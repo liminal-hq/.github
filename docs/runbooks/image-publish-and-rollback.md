@@ -3,10 +3,35 @@
 ## Publish Workflow
 
 1. Trigger `.github/workflows/shared-tauri-ci-images.yml` manually or via push/schedule.
-2. Confirm both image jobs complete:
-   - `Publish desktop image`
-   - `Publish mobile image`
+2. Confirm the publish matrix completes for all intended image families:
+   - CI desktop
+   - CI mobile
+   - Dev desktop
+   - Dev mobile
 3. Record published digest and tags from the step summary.
+
+## Image Families
+
+Published images:
+
+1. `ghcr.io/liminal-hq/tauri-ci-desktop`
+2. `ghcr.io/liminal-hq/tauri-ci-mobile`
+3. `ghcr.io/liminal-hq/tauri-dev-desktop`
+4. `ghcr.io/liminal-hq/tauri-dev-mobile`
+
+Docker targets:
+
+1. `ci-desktop`
+2. `ci-mobile`
+3. `dev-desktop`
+4. `dev-mobile`
+
+Usage guidance:
+
+1. Use `tauri-ci-*` images for CI and other automated pipeline contexts.
+2. Use `tauri-dev-*` images for devcontainers and interactive local development.
+3. Expect CI images to remain root-friendly and minimal.
+4. Expect dev images to use a non-root home-directory layout for writable tool paths.
 
 ## Tag Policy
 
@@ -18,7 +43,7 @@ Each image publish produces:
 
 ## Consumer Rollout
 
-1. Start with `latest` in non-critical CI.
+1. Start with `latest` in non-critical CI or local testing.
 2. For production rollout, pin consumer repos to a tested `sha-*` tag.
 3. Keep previous digest/tag noted for immediate fallback.
 
@@ -39,10 +64,15 @@ Before promoting a new image to broad usage, validate:
 1. `command -v` checks for `cargo`, `rustup`, `node`, `pnpm`, `cargo-tauri`
 2. Environment values:
    - `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true`
-   - `JAVA_HOME` (mobile)
-   - `ANDROID_HOME` (mobile)
+   - `JAVA_HOME` (mobile images)
+   - `ANDROID_HOME` (mobile images)
+   - user-home tool paths for dev images
 3. Smoke commands:
    - `cargo --version`
    - `node --version`
    - `pnpm --version`
-   - `sdkmanager --version` (mobile)
+   - `sdkmanager --version` (mobile images)
+4. Writable-path checks for dev images:
+   - `CARGO_HOME`
+   - `PNPM_HOME`
+   - `ANDROID_HOME` (dev mobile)
