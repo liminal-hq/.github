@@ -17,18 +17,19 @@ permissions:
 
 env:
   IMAGE_NAMESPACE: ghcr.io/liminal-hq
-  DESKTOP_IMAGE: tauri-ci-desktop
-  MOBILE_IMAGE: tauri-ci-mobile
+  CI_DESKTOP_IMAGE: tauri-ci-desktop
+  CI_MOBILE_IMAGE: tauri-ci-mobile
+  DEV_DESKTOP_IMAGE: tauri-dev-desktop
+  DEV_MOBILE_IMAGE: tauri-dev-mobile
 
 jobs:
-  publish-desktop:
-    name: Publish desktop image
+  cadence:
+    name: Evaluate publish cadence
     runs-on: ubuntu-latest
+    outputs:
+      run_publish: ${{ steps.cadence.outputs.run_publish }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Decide whether scheduled run should publish
+      - name: Decide whether this run should publish
         id: cadence
         shell: bash
         run: |
@@ -44,130 +45,152 @@ jobs:
             echo "run_publish=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Set up Docker Buildx
-        if: steps.cadence.outputs.run_publish == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        if: steps.cadence.outputs.run_publish == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract desktop metadata
-        if: steps.cadence.outputs.run_publish == 'true'
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAMESPACE }}/${{ env.DESKTOP_IMAGE }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-
-            type=schedule,pattern={{date 'YYYYMMDD'}}
-
-      - name: Build and push desktop image
-        if: steps.cadence.outputs.run_publish == 'true'
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/ci/Dockerfile
-          target: desktop
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Write desktop summary
-        if: steps.cadence.outputs.run_publish == 'true'
-        run: |
-          echo "## Desktop image published" >> "${GITHUB_STEP_SUMMARY}"
-          echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ env.DESKTOP_IMAGE }}\`" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Platforms: \`linux/amd64\`, \`linux/arm64\`" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Digest: \`${{ steps.build.outputs.digest }}\`" >> "${GITHUB_STEP_SUMMARY}"
-          echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"
-          echo "${{ steps.meta.outputs.tags }}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
-
       - name: Scheduled skip notice
         if: github.event_name == 'schedule' && steps.cadence.outputs.run_publish != 'true'
-        run: echo "Skipping this scheduled run to keep a two-week publish cadence."
+        run: |
+          echo "## Shared image publish skipped" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Skipping this scheduled run to keep a two-week publish cadence." >> "${GITHUB_STEP_SUMMARY}"
 
-  publish-mobile:
-    name: Publish mobile image
+  publish-images:
+    name: Publish ${{ matrix.label }}
     runs-on: ubuntu-latest
-    needs: publish-desktop
+    needs: cadence
+    if: needs.cadence.outputs.run_publish == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: CI desktop image
+            image: tauri-ci-desktop
+            target: ci-desktop
+            platforms: linux/amd64,linux/arm64
+            smoke_profile: ci-desktop
+          - label: CI mobile image
+            image: tauri-ci-mobile
+            target: ci-mobile
+            platforms: linux/amd64
+            smoke_profile: ci-mobile
+          - label: Dev desktop image
+            image: tauri-dev-desktop
+            target: dev-desktop
+            platforms: linux/amd64
+            smoke_profile: dev-desktop
+          - label: Dev mobile image
+            image: tauri-dev-mobile
+            target: dev-mobile
+            platforms: linux/amd64
+            smoke_profile: dev-mobile
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Decide whether scheduled run should publish
-        id: cadence
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" != "schedule" ]]; then
-            echo "run_publish=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          week_number="$(date +%V)"
-          if ((10#$week_number % 2 == 0)); then
-            echo "run_publish=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_publish=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Set up Docker Buildx
-        if: steps.cadence.outputs.run_publish == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: steps.cadence.outputs.run_publish == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract mobile metadata
-        if: steps.cadence.outputs.run_publish == 'true'
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAMESPACE }}/${{ env.MOBILE_IMAGE }}
+          images: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-
             type=schedule,pattern={{date 'YYYYMMDD'}}
 
-      - name: Build and push mobile image
-        if: steps.cadence.outputs.run_publish == 'true'
+      - name: Build smoke image
+        run: |
+          docker build \
+            --file docker/ci/Dockerfile \
+            --target "${{ matrix.target }}" \
+            --tag "local-smoke:${{ matrix.target }}" \
+            .
+
+      - name: Run smoke checks
+        shell: bash
+        run: |
+          case "${{ matrix.smoke_profile }}" in
+            ci-desktop)
+              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
+                command -v cargo rustup node pnpm cargo-tauri
+                cargo --version
+                node --version
+                pnpm --version
+              '
+              ;;
+            ci-mobile)
+              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
+                command -v cargo rustup node pnpm cargo-tauri sdkmanager java
+                cargo --version
+                node --version
+                pnpm --version
+                sdkmanager --version
+              '
+              ;;
+            dev-desktop)
+              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
+                [[ "$(id -u)" != "0" ]]
+                command -v cargo rustup node pnpm cargo-tauri
+                cargo --version
+                node --version
+                pnpm --version
+                [[ "$CARGO_HOME" == "$HOME/.cargo" ]]
+                [[ "$RUSTUP_HOME" == "$HOME/.rustup" ]]
+                [[ "$PNPM_HOME" == "$HOME/.local/share/pnpm" ]]
+                touch "$CARGO_HOME/.smoke-write"
+                rm "$CARGO_HOME/.smoke-write"
+                touch "$PNPM_HOME/.smoke-write"
+                rm "$PNPM_HOME/.smoke-write"
+              '
+              ;;
+            dev-mobile)
+              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
+                [[ "$(id -u)" != "0" ]]
+                command -v cargo rustup node pnpm cargo-tauri sdkmanager java
+                cargo --version
+                node --version
+                pnpm --version
+                sdkmanager --version
+                [[ "$ANDROID_HOME" == "$HOME/Android/Sdk" ]]
+                touch "$CARGO_HOME/.smoke-write"
+                rm "$CARGO_HOME/.smoke-write"
+                mkdir -p "$ANDROID_HOME/.smoke"
+                rmdir "$ANDROID_HOME/.smoke"
+              '
+              ;;
+            *)
+              echo "Unknown smoke profile: ${{ matrix.smoke_profile }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Build and push image
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/ci/Dockerfile
-          target: mobile
-          platforms: linux/amd64
+          target: ${{ matrix.target }}
+          platforms: ${{ matrix.platforms }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Write mobile summary
-        if: steps.cadence.outputs.run_publish == 'true'
+      - name: Write publish summary
         run: |
-          echo "## Mobile image published" >> "${GITHUB_STEP_SUMMARY}"
+          echo "## ${{ matrix.label }} published" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ env.MOBILE_IMAGE }}\`" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Platforms: \`linux/amd64\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Docker target: \`${{ matrix.target }}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Platforms: \`${{ matrix.platforms }}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Digest: \`${{ steps.build.outputs.digest }}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"
           echo "${{ steps.meta.outputs.tags }}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Scheduled skip notice
-        if: github.event_name == 'schedule' && steps.cadence.outputs.run_publish != 'true'
-        run: echo "Skipping this scheduled run to keep a two-week publish cadence."
