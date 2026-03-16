@@ -61,3 +61,8 @@ Every published image should be smoke-validated for:
 - Android tooling on mobile images
 - writable user-home paths on dev images
 - expected environment variables for the image family
+
+## Related Docs
+
+- Implementation spec: [`shared-image-implementation-spec.md`](./shared-image-implementation-spec.md)
+- Publish and rollback runbook: [`../runbooks/image-publish-and-rollback.md`](../runbooks/image-publish-and-rollback.md)

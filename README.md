@@ -30,6 +30,7 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
   - `dev-desktop`
   - `dev-mobile`
 - Shared image layout reference: [`docs/reference/shared-image-layout.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-layout.md)
+- Shared image implementation spec: [`docs/reference/shared-image-implementation-spec.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-implementation-spec.md)
 
 ## Repositories in Scope
 
@@ -42,4 +43,5 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 - Image publish workflow: [`.github/workflows/shared-tauri-ci-images.yml`](https://github.com/liminal-hq/.github/blob/main/.github/workflows/shared-tauri-ci-images.yml)
 - Shared Dockerfile: [`docker/ci/Dockerfile`](https://github.com/liminal-hq/.github/blob/main/docker/ci/Dockerfile)
 - Shared image layout reference: [`docs/reference/shared-image-layout.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-layout.md)
+- Shared image implementation spec: [`docs/reference/shared-image-implementation-spec.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-implementation-spec.md)
 - Publish and rollback runbook: [`docs/runbooks/image-publish-and-rollback.md`](https://github.com/liminal-hq/.github/blob/main/docs/runbooks/image-publish-and-rollback.md)
