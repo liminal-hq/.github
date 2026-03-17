@@ -15,8 +15,18 @@ FROM ubuntu:${UBUNTU_VERSION} AS ci-base
 ARG DEBIAN_FRONTEND
 
 # Core Linux build dependencies required by Tauri desktop CI builds.
+# Install GitHub CLI from the official GitHub package repository so shared images
+# track the supported upstream release channel instead of the distro package lag.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl wget git file build-essential pkg-config patchelf \
+    ca-certificates curl wget \
+    && mkdir -p -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
+    && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+      https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    git gh file build-essential pkg-config patchelf \
     libssl-dev libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
     libayatana-appindicator3-dev librsvg2-dev xdg-utils unzip \
     && rm -rf /var/lib/apt/lists/*
@@ -110,8 +120,18 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime \
     && echo "${TZ}" > /etc/timezone
 
 # Desktop devcontainer dependencies and quality-of-life packages.
+# Install GitHub CLI from the official GitHub package repository so devcontainers
+# get the supported upstream release channel for interactive GitHub workflows.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl wget git file build-essential pkg-config patchelf \
+    ca-certificates curl wget \
+    && mkdir -p -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
+    && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+      https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    git gh file build-essential pkg-config patchelf \
     libssl-dev libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
     libayatana-appindicator3-dev librsvg2-dev xdg-utils unzip \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-bad fonts-noto-color-emoji \

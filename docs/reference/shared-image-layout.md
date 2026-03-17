@@ -68,11 +68,13 @@ Only the desktop CI image is multi-arch today. Consumers that need Linux ARM sho
 
 Every published image should be smoke-validated for:
 
-- core tool availability: `cargo`, `rustup`, `node`, `pnpm`, `cargo-tauri`
+- core tool availability: `cargo`, `rustup`, `node`, `pnpm`, `cargo-tauri`, `gh`
 - Android tooling on mobile images
 - writable user-home paths on dev images
 - expected environment variables for the image family
 - expected platform coverage for the image family, especially the `linux/arm64` variant on `tauri-ci-desktop`
+
+`gh` installation is part of the shared image contract, but authentication is still environment-driven. GitHub Actions jobs should pass `GH_TOKEN` or `GITHUB_TOKEN` when invoking the CLI inside the container.
 
 ## Related Docs
 

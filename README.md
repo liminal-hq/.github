@@ -30,6 +30,13 @@ The ARM variant exists today to support downstream Linux ARM runners such as `ub
 
 - CI images are for GitHub Actions and other automated pipelines that want a lean, root-friendly toolchain baseline.
 - Dev images are for devcontainers and interactive local work, with a non-root user-home layout for Cargo, Rustup, pnpm, and Android tooling.
+- Both image families include the GitHub CLI (`gh`) for release, issue, and workflow operations that run inside the shared containers.
+
+## GitHub CLI Auth
+
+- Installing `gh` does not automatically authenticate it.
+- In GitHub Actions jobs, `gh` can use `GH_TOKEN` or `GITHUB_TOKEN` from the job environment without an interactive login step.
+- In devcontainers, authenticate explicitly with `gh auth login` or provide a token through the environment when needed.
 
 ## Layout Scheme
 

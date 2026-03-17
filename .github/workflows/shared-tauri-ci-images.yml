@@ -119,28 +119,31 @@ jobs:
           case "${{ matrix.smoke_profile }}" in
             ci-desktop)
               docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
-                command -v cargo rustup node pnpm cargo-tauri
+                command -v cargo rustup node pnpm cargo-tauri gh
                 cargo --version
                 node --version
                 pnpm --version
+                gh --version
               '
               ;;
             ci-mobile)
               docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
-                command -v cargo rustup node pnpm cargo-tauri sdkmanager java
+                command -v cargo rustup node pnpm cargo-tauri gh sdkmanager java
                 cargo --version
                 node --version
                 pnpm --version
+                gh --version
                 sdkmanager --version
               '
               ;;
             dev-desktop)
               docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
                 [[ "$(id -u)" != "0" ]]
-                command -v cargo rustup node pnpm cargo-tauri
+                command -v cargo rustup node pnpm cargo-tauri gh
                 cargo --version
                 node --version
                 pnpm --version
+                gh --version
                 [[ "$CARGO_HOME" == "$HOME/.cargo" ]]
                 [[ "$RUSTUP_HOME" == "$HOME/.rustup" ]]
                 [[ "$PNPM_HOME" == "$HOME/.local/share/pnpm" ]]
@@ -153,10 +156,11 @@ jobs:
             dev-mobile)
               docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
                 [[ "$(id -u)" != "0" ]]
-                command -v cargo rustup node pnpm cargo-tauri sdkmanager java
+                command -v cargo rustup node pnpm cargo-tauri gh sdkmanager java
                 cargo --version
                 node --version
                 pnpm --version
+                gh --version
                 sdkmanager --version
                 [[ "$ANDROID_HOME" == "$HOME/Android/Sdk" ]]
                 touch "$CARGO_HOME/.smoke-write"

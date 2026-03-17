@@ -168,6 +168,7 @@ Minimum checks:
 - `node`
 - `pnpm`
 - `cargo-tauri`
+- `gh`
 - version commands for core tooling
 
 ### CI mobile
@@ -197,6 +198,15 @@ Minimum checks:
 - confirm writable Android path access
 - `sdkmanager`
 - `java`
+
+## GitHub CLI Authentication
+
+Installing `gh` does not perform authentication by itself.
+
+Expected usage:
+
+- CI jobs that run inside the shared images should provide `GH_TOKEN` or `GITHUB_TOKEN` in the environment when the GitHub CLI is used.
+- Devcontainers should authenticate explicitly with `gh auth login` or an equivalent token-based flow.
 
 ## Documentation Contract
 
