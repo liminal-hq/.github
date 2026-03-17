@@ -17,10 +17,26 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 - `ghcr.io/liminal-hq/tauri-dev-desktop`
 - `ghcr.io/liminal-hq/tauri-dev-mobile`
 
+## Platform Support
+
+- `tauri-ci-desktop` publishes `linux/amd64` and `linux/arm64`.
+- `tauri-ci-mobile` currently publishes `linux/amd64` only.
+- `tauri-dev-desktop` currently publishes `linux/amd64` only.
+- `tauri-dev-mobile` currently publishes `linux/amd64` only.
+
+The ARM variant exists today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release jobs that consume `tauri-ci-desktop`.
+
 ## Image Families
 
 - CI images are for GitHub Actions and other automated pipelines that want a lean, root-friendly toolchain baseline.
 - Dev images are for devcontainers and interactive local work, with a non-root user-home layout for Cargo, Rustup, pnpm, and Android tooling.
+- Both image families include the GitHub CLI (`gh`) for release, issue, and workflow operations that run inside the shared containers.
+
+## GitHub CLI Auth
+
+- Installing `gh` does not automatically authenticate it.
+- In GitHub Actions jobs, `gh` can use `GH_TOKEN` or `GITHUB_TOKEN` from the job environment without an interactive login step.
+- In devcontainers, authenticate explicitly with `gh auth login` or provide a token through the environment when needed.
 
 ## Layout Scheme
 

@@ -15,9 +15,15 @@
 Published images:
 
 1. `ghcr.io/liminal-hq/tauri-ci-desktop`
+   Current platforms: `linux/amd64`, `linux/arm64`
 2. `ghcr.io/liminal-hq/tauri-ci-mobile`
+   Current platforms: `linux/amd64`
 3. `ghcr.io/liminal-hq/tauri-dev-desktop`
+   Current platforms: `linux/amd64`
 4. `ghcr.io/liminal-hq/tauri-dev-mobile`
+   Current platforms: `linux/amd64`
+
+Only `tauri-ci-desktop` is multi-arch today. Downstream consumers should not assume ARM support exists for the mobile or dev image families unless that contract is expanded in a later change.
 
 Docker targets:
 

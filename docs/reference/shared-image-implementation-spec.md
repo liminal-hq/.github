@@ -20,6 +20,8 @@ Published image set:
 | `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | Desktop devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-mobile` | `dev-mobile` | Android/mobile devcontainers |
 
+The platform contract is intentionally asymmetric today: `tauri-ci-desktop` publishes both `linux/amd64` and `linux/arm64`, while the mobile and dev image families currently publish `linux/amd64` only.
+
 ## Design Goals
 
 1. Keep the CI image family stable for current consumers.
@@ -149,7 +151,9 @@ Initial expected platform coverage:
 | `tauri-dev-desktop` | `linux/amd64` |
 | `tauri-dev-mobile` | `linux/amd64` |
 
-If multi-arch dev images become necessary later, that should be treated as an explicit follow-up rather than assumed by default.
+The `linux/arm64` desktop CI variant is required by downstream Linux ARM release jobs that run on `ubuntu-24.04-arm`.
+
+If multi-arch dev images or mobile images become necessary later, that should be treated as an explicit follow-up rather than assumed by default.
 
 ## Smoke Validation Contract
 
@@ -164,6 +168,7 @@ Minimum checks:
 - `node`
 - `pnpm`
 - `cargo-tauri`
+- `gh`
 - version commands for core tooling
 
 ### CI mobile
@@ -193,6 +198,15 @@ Minimum checks:
 - confirm writable Android path access
 - `sdkmanager`
 - `java`
+
+## GitHub CLI Authentication
+
+Installing `gh` does not perform authentication by itself.
+
+Expected usage:
+
+- CI jobs that run inside the shared images should provide `GH_TOKEN` or `GITHUB_TOKEN` in the environment when the GitHub CLI is used.
+- Devcontainers should authenticate explicitly with `gh auth login` or an equivalent token-based flow.
 
 ## Documentation Contract
 
