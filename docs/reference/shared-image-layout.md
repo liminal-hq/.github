@@ -76,6 +76,8 @@ Every published image should be smoke-validated for:
 
 `gh` installation is part of the shared image contract, but authentication is still environment-driven. GitHub Actions jobs should pass `GH_TOKEN` or `GITHUB_TOKEN` when invoking the CLI inside the container.
 
+Smoke validation should build a single local runner-compatible image variant for fast checks. Multi-platform publication should happen only in the final publish step.
+
 ## Related Docs
 
 - Implementation spec: [`shared-image-implementation-spec.md`](./shared-image-implementation-spec.md)

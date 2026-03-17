@@ -65,21 +65,25 @@ jobs:
             image: tauri-ci-desktop
             target: ci-desktop
             platforms: linux/amd64,linux/arm64
+            smoke_platform: linux/amd64
             smoke_profile: ci-desktop
           - label: CI mobile image
             image: tauri-ci-mobile
             target: ci-mobile
             platforms: linux/amd64
+            smoke_platform: linux/amd64
             smoke_profile: ci-mobile
           - label: Dev desktop image
             image: tauri-dev-desktop
             target: dev-desktop
             platforms: linux/amd64
+            smoke_platform: linux/amd64
             smoke_profile: dev-desktop
           - label: Dev mobile image
             image: tauri-dev-mobile
             target: dev-mobile
             platforms: linux/amd64
+            smoke_platform: linux/amd64
             smoke_profile: dev-mobile
     steps:
       - name: Checkout
@@ -106,12 +110,16 @@ jobs:
             type=schedule,pattern={{date 'YYYYMMDD'}}
 
       - name: Build smoke image
-        run: |
-          docker build \
-            --file docker/ci/Dockerfile \
-            --target "${{ matrix.target }}" \
-            --tag "local-smoke:${{ matrix.target }}" \
-            .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/ci/Dockerfile
+          target: ${{ matrix.target }}
+          platforms: ${{ matrix.smoke_platform }}
+          load: true
+          tags: local-smoke:${{ matrix.target }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache,mode=max
 
       - name: Run smoke checks
         shell: bash
@@ -186,6 +194,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache,mode=max
 
       - name: Write publish summary
         run: |
