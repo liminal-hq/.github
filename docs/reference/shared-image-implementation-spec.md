@@ -124,7 +124,8 @@ The shared image publication workflow is responsible for:
 2. publishing all intended image families
 3. applying a consistent tag policy
 4. running smoke validation before push
-5. writing digest and tag summaries for each image
+5. reusing persistent build cache across runs
+6. writing digest and tag summaries for each image
 
 ### Cadence
 
@@ -207,6 +208,31 @@ Expected usage:
 
 - CI jobs that run inside the shared images should provide `GH_TOKEN` or `GITHUB_TOKEN` in the environment when the GitHub CLI is used.
 - Devcontainers should authenticate explicitly with `gh auth login` or an equivalent token-based flow.
+
+## Cache Strategy
+
+The shared image workflow should use persistent registry-backed Buildx cache for each published image family.
+
+Expected behaviour:
+
+- smoke builds restore prior cache state when available
+- smoke builds write cache state that the publish build in the same job can reuse
+- publish builds write the refreshed cache back to the registry for future runs
+- cache references stay image-specific rather than sharing one global cache across all targets
+
+This keeps repeat runs faster while avoiding cache collisions between desktop, mobile, CI, and dev image families.
+
+## Smoke Build Strategy
+
+Smoke validation should use Buildx rather than a separate plain `docker build`.
+
+Expected behaviour:
+
+- smoke builds load a single-platform image into the local Docker engine for `docker run` validation
+- smoke validation targets the runner-compatible platform only
+- final publish builds remain the place where multi-platform images are assembled and pushed
+
+This avoids maintaining two disconnected build paths and improves cache reuse between smoke validation and the final publish step.
 
 ## Documentation Contract
 
