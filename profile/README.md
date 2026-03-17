@@ -13,6 +13,8 @@ Liminal HQ is an independent studio building local-first software for calm, dura
   - [Coherence Chat Exporter](https://github.com/liminal-hq/coherence-chat-exporter) — archive AI conversations into portable Markdown.
 - **System tools**
   - [SMDU](https://github.com/liminal-hq/smdu) — terminal disk usage analyser.
+- **Developer tools**
+  - [Flow](https://github.com/liminal-hq/flow) — terminal-native working memory for developers.
 - **Platform and infrastructure**
   - [Tauri Plugins Workspace](https://github.com/liminal-hq/tauri-plugins-workspace) — shared Tauri v2 plugin ecosystem.
   - [Skills](https://github.com/liminal-hq/skills) — reusable multi-agent workflow skills.
