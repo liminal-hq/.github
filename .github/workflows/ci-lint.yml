@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      checks: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.3
@@ -22,7 +22,11 @@ jobs:
         uses: reviewdog/action-actionlint@v1.72.0
         with:
           github_token: ${{ github.token }}
-          reporter: github-pr-review
+          # github-pr-check (not github-pr-review): annotations tied to this
+          # check run, replaced on every re-run. github-pr-review posts
+          # separate PR review comments instead, which pile up across pushes
+          # and never auto-resolve even once the underlying line is fixed.
+          reporter: github-pr-check
           fail_level: error
           # actionlint reports every diagnostic (including shellcheck-sourced
           # ones) at a uniform "error" level to reviewdog regardless of
