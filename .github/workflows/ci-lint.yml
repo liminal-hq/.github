@@ -30,8 +30,12 @@ jobs:
           # fail_level alone can't distinguish them. Ignore the specific,
           # already-triaged shellcheck codes in the existing scripts
           # (SC2129 style, SC2016/SC2012 info, SC2046 warning) by message
-          # instead, so new codes still fail the check.
-          actionlint_flags: -ignore 'SC2129' -ignore 'SC2016' -ignore 'SC2012' -ignore 'SC2046'
+          # instead, so new codes still fail the check. No quotes: this
+          # action's entrypoint is a POSIX sh script that word-splits this
+          # value without stripping quotes, so a quoted value would be
+          # passed to actionlint literally (quote characters included) and
+          # silently match nothing.
+          actionlint_flags: -ignore SC2129 -ignore SC2016 -ignore SC2012 -ignore SC2046
 
   hadolint:
     name: Lint Dockerfile (hadolint)
