@@ -128,6 +128,12 @@ jobs:
       - name: Write summary
         if: always()
         run: |
+          appimage_file="$(ls work/dist/*.AppImage 2>/dev/null | head -1 || true)"
+          appimage_size="unavailable"
+          if [ -n "${appimage_file}" ] && [ -f "${appimage_file}" ]; then
+            appimage_size="$(du -h "${appimage_file}" | cut -f1)"
+          fi
+
           {
             echo "## Arch AppImage Packaging Summary"
             echo
@@ -139,4 +145,5 @@ jobs:
             echo "- Dependency install: \`${{ steps.deps.outcome }}\`"
             echo "- Assembly and quick-sharun: \`${{ steps.assemble.outcome }}\`"
             echo "- Output artifact: \`${{ steps.set-name.outputs.name }}\`"
+            echo "- Artifact size: \`${appimage_size}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
