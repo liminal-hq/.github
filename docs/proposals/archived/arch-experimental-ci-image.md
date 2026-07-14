@@ -1,6 +1,8 @@
 # Proposal: Experimental Arch-based `tauri-ci-desktop` Image
 
-Status: **validated.** Route B selected, piloted in `emoji-nook` (`experiment/arch-quick-sharun-appimage`), and the resulting AppImage was run directly and confirmed to no longer hit `EGL_BAD_PARAMETER` — it starts cleanly through webview initialisation, well past where the Ubuntu-built AppImage previously aborted. Now being generalised into a reusable workflow; see [Reusable workflow](#reusable-workflow) below.
+**Archived decision record.** This document captured the investigation and pilot that led to `package-arch-appimage.yml`. For current usage docs, see [`../../reference/package-arch-appimage.md`](../../reference/package-arch-appimage.md) — that's the maintained reference; this file is kept for the "why Route B and not Route A" reasoning and the specific bugs hit during the pilot, not as something to read to use the workflow.
+
+Status: **validated and implemented.** Route B selected, piloted in `emoji-nook` (`experiment/arch-quick-sharun-appimage`), confirmed fixed by running the resulting AppImage directly, and generalised into the reusable workflow linked above.
 
 ## Problem
 
@@ -44,7 +46,7 @@ Hand-roll a new stage from `archlinux:base-devel`, install the GTK/WebKit toolch
 Findings while scoping this route:
 
 - `archlinux:base-devel` is an official, dated Docker Hub tag — confirmed live.
-- It is **amd64-only**. Mainline Arch does not target ARM; that's a separate, community-run project (Arch Linux ARM / ALARM) with no official Docker Hub image. Since `tauri-ci-desktop` is **already multi-arch today** (`linux/amd64` + `linux/arm64`, built on native ARM runners per [`shared-image-layout.md`](../reference/shared-image-layout.md)), Route A would regress ARM support unless we additionally adopt ALARM for that leg — a second, less-official distro with its own risk profile.
+- It is **amd64-only**. Mainline Arch does not target ARM; that's a separate, community-run project (Arch Linux ARM / ALARM) with no official Docker Hub image. Since `tauri-ci-desktop` is **already multi-arch today** (`linux/amd64` + `linux/arm64`, built on native ARM runners per [`shared-image-layout.md`](../../reference/shared-image-layout.md)), Route A would regress ARM support unless we additionally adopt ALARM for that leg — a second, less-official distro with its own risk profile.
 - `libayatana-appindicator3`'s Arch equivalent is `libayatana-appindicator`, which **is** in the official `extra` repo (corrected during the pilot — an earlier pass at this research incorrectly searched for `libappindicator-gtk3`, a name that doesn't exist on Arch at all; cloning it from the AUR silently produces an empty repo rather than a clear 404, which is how that mistake surfaced). No AUR build needed for this dependency in either route.
 - We would still be depending on the unmerged, actively-changing `feat/truly-portable-appimage` branch and its embedded `sharun.rs`, which has its own open, unresolved bugs reported by the PR author as recently as 2026-06-30 (a hang under `LD_DEBUG=libs` tracing caused by `set -m` failing without a controlling tty — notably, GitHub Actions runners are exactly that: non-interactive, no tty).
 
@@ -77,43 +79,9 @@ Pilot **Route B** first. It removes the specific thing most likely to be unstabl
 
 ## Pilot implementation
 
-No changes to this repository (`liminal-hq/.github`) are needed for the pilot. Route B points directly at `pkgforge-dev`'s own maintained container — there is no new shared Docker image to build or publish here. All changes live in the pilot repo's workflow.
+No changes to this repository were needed for the pilot itself — Route B points directly at `pkgforge-dev`'s own maintained container, so there was no new shared Docker image to build. All pilot changes lived in `emoji-nook`'s workflow, later generalised into the reusable workflow documented in [`../../reference/package-arch-appimage.md`](../../reference/package-arch-appimage.md).
 
-**Pinned container:**
-
-```
-ghcr.io/pkgforge-dev/archlinux@sha256:f6fc7e14b0612a355d7ab50efb3cc40010ba28e4766860bd238d313b308f190b
-```
-
-(resolved from `ghcr.io/pkgforge-dev/archlinux:latest` at pilot time; pinned by digest so the pilot doesn't drift out from under us the same way the current `feat/truly-portable-appimage` branch install does). Confirmed via `docker manifest inspect --verbose` that this is a genuine multi-arch index (`amd64`, `arm64`, `armv7`, `riscv64`); confirmed by extracting `/etc/pacman.conf` and `/etc/pacman.d/mirrorlist` from the `arm64` platform image directly (via `docker create` + `docker cp`, no execution needed since the host can't run foreign-arch binaries without QEMU) that pkgforge-dev isn't doing anything exotic for ARM — the `arm64` platform is literally **Arch Linux ARM (ALARM)**: `Architecture = aarch64`, `Server = http://mirror.archlinuxarm.org/$arch/$repo`. It's a standard Docker manifest list where each platform is served by whichever native Arch-family distro exists for that architecture (mainline Arch for `amd64`, ALARM for `arm64`/`armv7`), unified under one tag.
-
-**Job 1 — Build (unchanged, existing `ci-desktop` image):**
-
-Same as today: `pnpm install --frozen-lockfile`, `pnpm release:version:check`, `cargo tauri build --bundles deb,rpm`, using the **stable, released** `tauri-cli` — no experimental branch, no `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT`. Upload the `.deb` as a build artifact. `.rpm` ships as-is, untouched by any of this.
-
-**Job 2 — Package the AppImage (new, pinned `pkgforge-dev/archlinux` container):**
-
-- Download the `.deb` artifact from Job 1
-- Run `pkgforge-dev/anylinux-setup-action` (composite action — `pacman-key --init`, baseline package sync, installs `quick-sharun` / `get-debloated-pkgs` / `make-aur-package` as CLI tools)
-- App-specific deps (note: use `-S --needed`, not a second `-Syu` — the setup action already did a full sync+upgrade, and re-running `-Syu` immediately after it appeared to knock `patchelf` back out during the pilot, breaking `quick-sharun`):
-  ```sh
-  pacman -S --noconfirm --needed webkit2gtk-4.1 gtk3 libayatana-appindicator patchelf
-  get-debloated-pkgs --add-common --prefer-nano
-  ```
-- App-specific AppDir assembly (layout confirmed to match Tauri's own `debian.rs` bundler output: `usr/bin/<binary>`, `usr/share/applications/<name>.desktop`, `usr/share/icons/hicolor/*/apps/<name>.png`). Pick a single icon rather than globbing — Tauri ships multiple resolutions under the same basename, which collides with `cp`'s just-created-file guard when copied in one invocation:
-  ```sh
-  export OUTPATH=./dist   # quick-sharun writes to cwd if this isn't set
-  ar xv emoji-nook_*.deb
-  tar xf data.tar.*
-  mv usr AppDir
-  cp AppDir/share/applications/*.desktop AppDir/
-  icon="$(find AppDir/share/icons/hicolor -name '*.png' | sort -V | tail -1)"
-  if [ -n "$icon" ]; then cp "$icon" AppDir/; fi
-  quick-sharun ./AppDir/bin/*
-  quick-sharun --make-appimage
-  quick-sharun --test ./dist/*.AppImage
-  ```
-- Upload the resulting `.AppImage` as the real release artifact
+**How the pinned container was chosen and verified:** resolved `ghcr.io/pkgforge-dev/archlinux:latest` to a digest (pinning by digest so it doesn't drift the same way the current `feat/truly-portable-appimage` branch install does), then confirmed via `docker manifest inspect --verbose` that it's a genuine multi-arch index (`amd64`, `arm64`, `armv7`, `riscv64`). Out of curiosity about how `pkgforge-dev` achieves multi-arch when mainline Arch doesn't target ARM at all, extracted `/etc/pacman.conf` and `/etc/pacman.d/mirrorlist` from the `arm64` platform image directly (via `docker create` + `docker cp`, no execution needed since the host can't run foreign-arch binaries without QEMU): it's not exotic at all — the `arm64` platform is literally **Arch Linux ARM (ALARM)**, a standard Docker manifest list where each platform is served by whichever native Arch-family distro exists for that architecture, unified under one tag.
 
 **Validation — complete:**
 
@@ -123,34 +91,7 @@ Same as today: `pnpm install --frozen-lockfile`, `pnpm release:version:check`, `
 
 ## Reusable workflow
 
-Route B is being generalised into a `workflow_call` reusable workflow, `package-arch-appimage.yml`, hosted in this repository, rather than each consumer repo copy-pasting the pilot's YAML. It is intentionally **packaging-only** — it does not build the `.deb` itself. Consumer repos already build a `.deb` as part of their own release pipeline (e.g. `emoji-nook`'s existing `build-linux` job); duplicating that build inside the reusable workflow would waste CI time compiling the same Rust project twice per release. The reusable workflow instead takes an already-uploaded `.deb` artifact as input.
-
-Inputs: `deb-artifact-name` (required), `runs-on` (so the caller can matrix x64/arm64 the same way `build-linux` already does against the multi-arch pinned container), `app-version` (used for the AppImage filename — the pilot's own script never set this, producing `Emoji_Nook-UNKNOWN-anylinux-x86_64.AppImage`; fixed in the generalised version), `extra-pacman-packages`, `extra-aur-packages` (for the rare case a consumer genuinely needs one — the pilot ended up not needing this for `emoji-nook`, but it's cheap to keep as an escape hatch), and `arch-container-digest` (defaults to the pinned digest above, bump once here rather than per-repo). Output: `artifact-name`, so the caller knows what to download.
-
-It ends with its own step-summary write, matching the `Write summary` convention already used in `release.yml` and `shared-tauri-ci-images.yml` — the reusable workflow owns packaging-specific reporting (packages installed, `quick-sharun --test` outcome, output artifact), the caller can still add its own release-level summary on top, same split that already exists today between `build-linux`'s and `publish-release`'s summaries.
-
-Consumer usage (sketch, per architecture leg):
-
-```yaml
-jobs:
-  package-appimage:
-    needs: build-linux
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            deb-artifact: linux-release-assets-x64
-          - runner: ubuntu-24.04-arm
-            deb-artifact: linux-release-assets-arm64
-    uses: liminal-hq/.github/.github/workflows/package-arch-appimage.yml@main
-    with:
-      runs-on: ${{ matrix.runner }}
-      deb-artifact-name: ${{ matrix.deb-artifact }}
-      app-version: ${{ needs.prepare-release.outputs.release_version }}
-    secrets: inherit
-```
-
-And on the caller's existing `build-linux` job: drop `appimage` from `--bundles appimage,deb,rpm` (leaving `deb,rpm`) and drop `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT` entirely — AppImage production moves fully to the new job, so that build no longer touches the experimental Tauri branch at all.
+Route B was generalised into a `workflow_call` reusable workflow, `package-arch-appimage.yml`, hosted in this repository, rather than each consumer repo copy-pasting the pilot's YAML. Inputs, outputs, usage example, and operational notes are documented in [`../../reference/package-arch-appimage.md`](../../reference/package-arch-appimage.md) — not duplicated here.
 
 ## Explicitly deferred, not forgotten
 
@@ -170,4 +111,4 @@ And on the caller's existing `build-linux` job: drop `appimage` from `--bundles 
 - `quick-sharun` / `Anylinux-AppImages`: <https://github.com/pkgforge-dev/Anylinux-AppImages>
 - Reference demo: <https://github.com/Samueru-sama/tabularis-appimage-demo>
 - Setup action: <https://github.com/pkgforge-dev/anylinux-setup-action>
-- Related: [`shared-image-layout.md`](../reference/shared-image-layout.md), [`shared-image-implementation-spec.md`](../reference/shared-image-implementation-spec.md)
+- Related: [`shared-image-layout.md`](../../reference/shared-image-layout.md), [`shared-image-implementation-spec.md`](../../reference/shared-image-implementation-spec.md)

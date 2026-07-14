@@ -82,3 +82,4 @@ Smoke validation should build a single local runner-compatible image variant for
 
 - Implementation spec: [`shared-image-implementation-spec.md`](./shared-image-implementation-spec.md)
 - Publish and rollback runbook: [`../runbooks/image-publish-and-rollback.md`](../runbooks/image-publish-and-rollback.md)
+- AppImage packaging (reusable workflow): [`package-arch-appimage.md`](./package-arch-appimage.md)
