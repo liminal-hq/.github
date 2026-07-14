@@ -123,6 +123,7 @@ Keep labels accurate as the PR scope changes.
 - When shared image names, Docker targets, workflow behaviour, or operational contracts change, update the relevant repo docs in the same branch.
 - Keep README, runbooks, and reference documents aligned with the actual workflow and Docker layout.
 - Prefer adding stable reference docs for cross-repo contracts instead of burying important behaviour only in workflow YAML or issue threads.
+- Do not manually hard-wrap prose in markdown files (no inserting line breaks mid-paragraph to keep lines under some width). Let paragraphs run as single long lines and rely on the renderer/editor to soft-wrap.
 
 ## Project Structure
 
