@@ -60,7 +60,7 @@ jobs:
       EXTRA_AUR_PACKAGES: ${{ inputs.extra-aur-packages }}
     steps:
       - name: Download .deb artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@v7.0.0
         with:
           name: ${{ inputs.deb-artifact-name }}
           path: ./deb-input
@@ -125,7 +125,7 @@ jobs:
         run: echo "name=appimage-${RUNS_ON}" >> "$GITHUB_OUTPUT"
 
       - name: Upload AppImage artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: appimage-${{ inputs.runs-on }}
           path: work/dist/*.AppImage
