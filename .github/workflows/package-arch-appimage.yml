@@ -54,9 +54,13 @@ jobs:
       image: ghcr.io/pkgforge-dev/archlinux@${{ inputs.arch-container-digest }}
     outputs:
       artifact-name: ${{ steps.set-name.outputs.name }}
+    env:
+      RUNS_ON: ${{ inputs.runs-on }}
+      EXTRA_PACMAN_PACKAGES: ${{ inputs.extra-pacman-packages }}
+      EXTRA_AUR_PACKAGES: ${{ inputs.extra-aur-packages }}
     steps:
       - name: Download .deb artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: ${{ inputs.deb-artifact-name }}
           path: ./deb-input
@@ -71,9 +75,11 @@ jobs:
           # -S --needed, not -Syu: the setup action already did a full sync+upgrade.
           # Running -Syu again immediately after was observed knocking patchelf back
           # out during the initial emoji-nook pilot, breaking quick-sharun.
-          pacman -S --noconfirm --needed ${{ inputs.extra-pacman-packages }}
+          # shellcheck disable=SC2086 # intentionally word-split: space-separated package list
+          pacman -S --noconfirm --needed ${EXTRA_PACMAN_PACKAGES}
           get-debloated-pkgs --add-common --prefer-nano
-          for pkg in ${{ inputs.extra-aur-packages }}; do
+          # shellcheck disable=SC2086 # intentionally word-split: space-separated package list
+          for pkg in ${EXTRA_AUR_PACKAGES}; do
             make-aur-package "$pkg"
           done
 
@@ -116,10 +122,10 @@ jobs:
           log "AppImage packaging complete"
 
       - id: set-name
-        run: echo "name=appimage-${{ inputs.runs-on }}" >> "$GITHUB_OUTPUT"
+        run: echo "name=appimage-${RUNS_ON}" >> "$GITHUB_OUTPUT"
 
       - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: appimage-${{ inputs.runs-on }}
           path: work/dist/*.AppImage
@@ -127,6 +133,12 @@ jobs:
 
       - name: Write summary
         if: always()
+        env:
+          ARCH_CONTAINER_DIGEST: ${{ inputs.arch-container-digest }}
+          DEB_ARTIFACT_NAME: ${{ inputs.deb-artifact-name }}
+          DEPS_OUTCOME: ${{ steps.deps.outcome }}
+          ASSEMBLE_OUTCOME: ${{ steps.assemble.outcome }}
+          ARTIFACT_NAME: ${{ steps.set-name.outputs.name }}
         run: |
           appimage_file="$(ls work/dist/*.AppImage 2>/dev/null | head -1 || true)"
           appimage_size="unavailable"
@@ -137,13 +149,13 @@ jobs:
           {
             echo "## Arch AppImage Packaging Summary"
             echo
-            echo "- Runner: \`${{ inputs.runs-on }}\`"
-            echo "- Container: \`ghcr.io/pkgforge-dev/archlinux@${{ inputs.arch-container-digest }}\`"
-            echo "- Deb source artifact: \`${{ inputs.deb-artifact-name }}\`"
-            echo "- Extra pacman packages: \`${{ inputs.extra-pacman-packages }}\`"
-            echo "- Extra AUR packages: \`${{ inputs.extra-aur-packages || '(none)' }}\`"
-            echo "- Dependency install: \`${{ steps.deps.outcome }}\`"
-            echo "- Assembly and quick-sharun: \`${{ steps.assemble.outcome }}\`"
-            echo "- Output artifact: \`${{ steps.set-name.outputs.name }}\`"
+            echo "- Runner: \`${RUNS_ON}\`"
+            echo "- Container: \`ghcr.io/pkgforge-dev/archlinux@${ARCH_CONTAINER_DIGEST}\`"
+            echo "- Deb source artifact: \`${DEB_ARTIFACT_NAME}\`"
+            echo "- Extra pacman packages: \`${EXTRA_PACMAN_PACKAGES}\`"
+            echo "- Extra AUR packages: \`${EXTRA_AUR_PACKAGES:-(none)}\`"
+            echo "- Dependency install: \`${DEPS_OUTCOME}\`"
+            echo "- Assembly and quick-sharun: \`${ASSEMBLE_OUTCOME}\`"
+            echo "- Output artifact: \`${ARTIFACT_NAME}\`"
             echo "- Artifact size: \`${appimage_size}\`"
           } >> "${GITHUB_STEP_SUMMARY}"

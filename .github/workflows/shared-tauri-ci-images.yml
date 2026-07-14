@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   IMAGE_NAMESPACE: ghcr.io/liminal-hq
@@ -26,6 +25,9 @@ jobs:
   cadence:
     name: Evaluate publish cadence
     runs-on: ubuntu-latest
+    # No checkout and no GHCR access in this job, so it needs nothing beyond
+    # the default GITHUB_TOKEN metadata access.
+    permissions: {}
     outputs:
       run_publish: ${{ steps.cadence.outputs.run_publish }}
     steps:
@@ -57,6 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: cadence
     if: needs.cadence.outputs.run_publish == 'true'
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -81,13 +86,15 @@ jobs:
             smoke_profile: dev-mobile
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -95,7 +102,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
           tags: |
@@ -105,7 +112,7 @@ jobs:
             type=schedule,pattern={{date 'YYYYMMDD'}}
 
       - name: Build smoke image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/ci/Dockerfile
@@ -171,7 +178,7 @@ jobs:
 
       - name: Build and push image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/ci/Dockerfile
@@ -184,16 +191,19 @@ jobs:
           cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache,mode=max
 
       - name: Write publish summary
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           echo "## ${{ matrix.label }} published" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Docker target: \`${{ matrix.target }}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Platforms: \`${{ matrix.platforms }}\`" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Digest: \`${{ steps.build.outputs.digest }}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Digest: \`${DIGEST}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"
-          echo "${{ steps.meta.outputs.tags }}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
+          echo "${TAGS}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
 
   # CI desktop is the only multi-platform image (linux/amd64,linux/arm64). Building both
   # platforms in one buildx invocation on an amd64 runner emulates arm64 via QEMU, which
@@ -205,6 +215,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     needs: cadence
     if: needs.cadence.outputs.run_publish == 'true'
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -215,24 +228,26 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Sanitize platform for artifact/tag naming
         id: platform_pair
         run: echo "pair=$(echo '${{ matrix.platform }}' | tr / -)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build smoke image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/ci/Dockerfile
@@ -244,8 +259,10 @@ jobs:
           cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:buildcache,mode=max
 
       - name: Run smoke checks
+        env:
+          PLATFORM_PAIR: ${{ steps.platform_pair.outputs.pair }}
         run: |
-          docker run --rm "local-smoke:ci-desktop-${{ steps.platform_pair.outputs.pair }}" bash -lc '
+          docker run --rm "local-smoke:ci-desktop-${PLATFORM_PAIR}" bash -lc '
             command -v cargo rustup node pnpm cargo-tauri gh
             cargo --version
             node --version
@@ -255,7 +272,7 @@ jobs:
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/ci/Dockerfile
@@ -266,13 +283,14 @@ jobs:
           cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:buildcache,mode=max
 
       - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/digests/${DIGEST#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: digests-ci-desktop-${{ steps.platform_pair.outputs.pair }}
           path: /tmp/digests/*
@@ -283,19 +301,25 @@ jobs:
     name: Publish CI desktop image (merged manifest)
     runs-on: ubuntu-24.04
     needs: build-ci-desktop
+    # No checkout in this job (only artifact download + buildx/GHCR), so
+    # `contents: read` is deliberately omitted here. If a future step needs
+    # repo content, add it back explicitly.
+    permissions:
+      actions: read
+      packages: write
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: /tmp/digests
           pattern: digests-ci-desktop-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -303,7 +327,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}
           tags: |
@@ -320,9 +344,13 @@ jobs:
             $(printf '${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
-        run: docker buildx imagetools inspect ${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:${{ steps.meta.outputs.version }}
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: docker buildx imagetools inspect "${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:${VERSION}"
 
       - name: Write publish summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           echo "## CI desktop image published" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
@@ -330,4 +358,4 @@ jobs:
           echo "- Platforms: \`linux/amd64,linux/arm64\` (built natively per-arch, merged)" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"
-          echo "${{ steps.meta.outputs.tags }}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
+          echo "${TAGS}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
