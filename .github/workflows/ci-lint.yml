@@ -24,6 +24,14 @@ jobs:
           github_token: ${{ github.token }}
           reporter: github-pr-review
           fail_level: error
+          # actionlint reports every diagnostic (including shellcheck-sourced
+          # ones) at a uniform "error" level to reviewdog regardless of
+          # shellcheck's own embedded style/info/warning severity, so
+          # fail_level alone can't distinguish them. Ignore the specific,
+          # already-triaged shellcheck codes in the existing scripts
+          # (SC2129 style, SC2016/SC2012 info, SC2046 warning) by message
+          # instead, so new codes still fail the check.
+          actionlint_flags: -ignore 'SC2129' -ignore 'SC2016' -ignore 'SC2012' -ignore 'SC2046'
 
   hadolint:
     name: Lint Dockerfile (hadolint)

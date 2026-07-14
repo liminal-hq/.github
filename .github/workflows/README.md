@@ -19,7 +19,7 @@ Reusable workflow (`workflow_call`) that packages an already-built `.deb` into a
 Quality gate for this repo's own files: `actionlint` (with its built-in shellcheck integration) against workflow YAML, `hadolint` against `docker/ci/Dockerfile`, and `markdownlint-cli2` against all markdown docs. Blocking on PRs.
 
 - **Trigger:** `pull_request`.
-- **Config:** `../../.hadolint.yaml` (failure threshold set to `error` — a backlog of pre-existing `warning`-level hadolint findings is intentionally untriaged for now) and `../../.markdownlint.jsonc`.
+- **Config:** `../../.hadolint.yaml` (failure threshold set to `error` — a backlog of pre-existing `warning`-level hadolint findings is intentionally untriaged for now) and `../../.markdownlint.jsonc`. The actionlint step suppresses a fixed set of already-triaged shellcheck codes (SC2129, SC2016, SC2012, SC2046) via `actionlint_flags: -ignore '<code>'`, since reviewdog reports every actionlint diagnostic as `error` regardless of shellcheck's own embedded severity.
 
 ## `security-audit.yml`
 
