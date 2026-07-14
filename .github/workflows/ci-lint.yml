@@ -1,0 +1,60 @@
+name: CI Quality Checks
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  actionlint:
+    name: Lint workflow YAML (actionlint + shellcheck)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1.72.0
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-pr-review
+          fail_level: error
+
+  hadolint:
+    name: Lint Dockerfile (hadolint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        with:
+          dockerfile: docker/ci/Dockerfile
+          config: .hadolint.yaml
+
+  markdownlint:
+    name: Lint Markdown docs (markdownlint-cli2)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24.0.0
+        with:
+          globs: '**/*.md'
+          config: .markdownlint.jsonc
