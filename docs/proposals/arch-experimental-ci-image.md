@@ -1,50 +1,27 @@
 # Proposal: Experimental Arch-based `tauri-ci-desktop` Image
 
-Status: **validated.** Route B selected, piloted in `emoji-nook`
-(`experiment/arch-quick-sharun-appimage`), and the resulting AppImage was run directly and
-confirmed to no longer hit `EGL_BAD_PARAMETER` — it starts cleanly through webview
-initialisation, well past where the Ubuntu-built AppImage previously aborted. Now being
-generalised into a reusable workflow; see [Reusable workflow](#reusable-workflow) below.
+Status: **validated.** Route B selected, piloted in `emoji-nook` (`experiment/arch-quick-sharun-appimage`), and the resulting AppImage was run directly and confirmed to no longer hit `EGL_BAD_PARAMETER` — it starts cleanly through webview initialisation, well past where the Ubuntu-built AppImage previously aborted. Now being generalised into a reusable workflow; see [Reusable workflow](#reusable-workflow) below.
 
 ## Problem
 
-`tauri-ci-desktop` builds AppImages using `tauri-cli` installed from an unreleased,
-experimental upstream branch (`feat/truly-portable-appimage` on `tauri-apps/tauri`,
-[PR #12491](https://github.com/tauri-apps/tauri/pull/12491)), enabled via
-`TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true`. That branch's AppImage bundler
-(`crates/tauri-bundler/src/bundle/linux/appimage/sharun.rs`) shells out to a third-party
-tool, [`quick-sharun`](https://github.com/pkgforge-dev/Anylinux-AppImages), maintained by
-`Samueru-sama` under the `pkgforge-dev` org.
+`tauri-ci-desktop` builds AppImages using `tauri-cli` installed from an unreleased, experimental upstream branch (`feat/truly-portable-appimage` on `tauri-apps/tauri`, [PR #12491](https://github.com/tauri-apps/tauri/pull/12491)), enabled via `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true`. That branch's AppImage bundler (`crates/tauri-bundler/src/bundle/linux/appimage/sharun.rs`) shells out to a third-party tool, [`quick-sharun`](https://github.com/pkgforge-dev/Anylinux-AppImages), maintained by `Samueru-sama` under the `pkgforge-dev` org.
 
-`quick-sharun` is built and tested primarily for **Arch Linux**. Its own maintainer has
-said as much directly in the PR thread: *"it is meant to be used on archlinux only... it
-can be used on ubuntu but I only know that because one person used it there lol."* Our
-current `ci-base`/`ci-toolchain` stages are Ubuntu 24.04. This produces AppImages that
-fail at runtime with:
+`quick-sharun` is built and tested primarily for **Arch Linux**. Its own maintainer has said as much directly in the PR thread: *"it is meant to be used on archlinux only... it can be used on ubuntu but I only know that because one person used it there lol."* Our current `ci-base`/`ci-toolchain` stages are Ubuntu 24.04. This produces AppImages that fail at runtime with:
 
 ```
 Could not create default EGL display: EGL_BAD_PARAMETER. Aborting...
 ```
 
-This is not a one-off — the identical error was reported by another PR participant
-(`debba`) building on a non-Arch host, and the PR author (`FabianLars`) independently hit
-different library issues (pixbuf/glycin) trying Ubuntu 26.04 as recently as 2026-07-02.
-His stated direction for the branch is to mark it **Arch-only, experimental**, not to
-broaden non-Arch support.
+This is not a one-off — the identical error was reported by another PR participant (`debba`) building on a non-Arch host, and the PR author (`FabianLars`) independently hit different library issues (pixbuf/glycin) trying Ubuntu 26.04 as recently as 2026-07-02. His stated direction for the branch is to mark it **Arch-only, experimental**, not to broaden non-Arch support.
 
 ## Why this wasn't caught by pinning alone
 
 Two independent things float, unpinned, in the current setup:
 
-1. `docker/ci/Dockerfile` installs `tauri-cli` via
-   `cargo install --git ... --branch feat/truly-portable-appimage --force`, with no
-   commit SHA. Every image rebuild resolves to whatever the branch tip is at that moment.
-2. Even with (1) pinned, `sharun.rs` downloads `quick-sharun.sh` directly from
-   `pkgforge-dev/Anylinux-AppImages`'s `main` branch at build time, with no override env
-   var, only skipping the download `if !quick_sharun.exists()` in the tool cache.
+1. `docker/ci/Dockerfile` installs `tauri-cli` via `cargo install --git ... --branch feat/truly-portable-appimage --force`, with no commit SHA. Every image rebuild resolves to whatever the branch tip is at that moment.
+2. Even with (1) pinned, `sharun.rs` downloads `quick-sharun.sh` directly from `pkgforge-dev/Anylinux-AppImages`'s `main` branch at build time, with no override env var, only skipping the download `if !quick_sharun.exists()` in the tool cache.
 
-Both are out of scope for this proposal (tracked separately) — this document is about
-whether an Arch-based image is worth pursuing at all, independent of the pinning question.
+Both are out of scope for this proposal (tracked separately) — this document is about whether an Arch-based image is worth pursuing at all, independent of the pinning question.
 
 ## Blast radius if we change the shared `tauri-ci-desktop` image
 
@@ -62,59 +39,25 @@ This proposal is scoped to `ci-desktop` only. Mobile images are untouched by con
 
 ### Route A — Arch base image, keep using Tauri's experimental bundler
 
-Hand-roll a new stage from `archlinux:base-devel`, install the GTK/WebKit toolchain via
-`pacman`, and keep installing `tauri-cli` from `feat/truly-portable-appimage` exactly as
-today, just on an Arch base instead of Ubuntu.
+Hand-roll a new stage from `archlinux:base-devel`, install the GTK/WebKit toolchain via `pacman`, and keep installing `tauri-cli` from `feat/truly-portable-appimage` exactly as today, just on an Arch base instead of Ubuntu.
 
 Findings while scoping this route:
 
 - `archlinux:base-devel` is an official, dated Docker Hub tag — confirmed live.
-- It is **amd64-only**. Mainline Arch does not target ARM; that's a separate,
-  community-run project (Arch Linux ARM / ALARM) with no official Docker Hub image.
-  Since `tauri-ci-desktop` is **already multi-arch today** (`linux/amd64` +
-  `linux/arm64`, built on native ARM runners per
-  [`shared-image-layout.md`](../reference/shared-image-layout.md)), Route A would
-  regress ARM support unless we additionally adopt ALARM for that leg — a second,
-  less-official distro with its own risk profile.
-- `libayatana-appindicator3`'s Arch equivalent is `libayatana-appindicator`, which **is**
-  in the official `extra` repo (corrected during the pilot — an earlier pass at this
-  research incorrectly searched for `libappindicator-gtk3`, a name that doesn't exist on
-  Arch at all; cloning it from the AUR silently produces an empty repo rather than a clear
-  404, which is how that mistake surfaced). No AUR build needed for this dependency in
-  either route.
-- We would still be depending on the unmerged, actively-changing
-  `feat/truly-portable-appimage` branch and its embedded `sharun.rs`, which has its own
-  open, unresolved bugs reported by the PR author as recently as 2026-06-30 (a hang under
-  `LD_DEBUG=libs` tracing caused by `set -m` failing without a controlling tty — notably,
-  GitHub Actions runners are exactly that: non-interactive, no tty).
+- It is **amd64-only**. Mainline Arch does not target ARM; that's a separate, community-run project (Arch Linux ARM / ALARM) with no official Docker Hub image. Since `tauri-ci-desktop` is **already multi-arch today** (`linux/amd64` + `linux/arm64`, built on native ARM runners per [`shared-image-layout.md`](../reference/shared-image-layout.md)), Route A would regress ARM support unless we additionally adopt ALARM for that leg — a second, less-official distro with its own risk profile.
+- `libayatana-appindicator3`'s Arch equivalent is `libayatana-appindicator`, which **is** in the official `extra` repo (corrected during the pilot — an earlier pass at this research incorrectly searched for `libappindicator-gtk3`, a name that doesn't exist on Arch at all; cloning it from the AUR silently produces an empty repo rather than a clear 404, which is how that mistake surfaced). No AUR build needed for this dependency in either route.
+- We would still be depending on the unmerged, actively-changing `feat/truly-portable-appimage` branch and its embedded `sharun.rs`, which has its own open, unresolved bugs reported by the PR author as recently as 2026-06-30 (a hang under `LD_DEBUG=libs` tracing caused by `set -m` failing without a controlling tty — notably, GitHub Actions runners are exactly that: non-interactive, no tty).
 
 ### Route B — Adopt the tool author's own published pattern
 
-`Samueru-sama` (quick-sharun's maintainer) publishes a working reference setup at
-[`tabularis-appimage-demo`](https://github.com/Samueru-sama/tabularis-appimage-demo),
-which Scott linked in the PR thread back in March. It does **not** use Tauri's embedded
-experimental bundler at all:
+`Samueru-sama` (quick-sharun's maintainer) publishes a working reference setup at [`tabularis-appimage-demo`](https://github.com/Samueru-sama/tabularis-appimage-demo), which Scott linked in the PR thread back in March. It does **not** use Tauri's embedded experimental bundler at all:
 
-- Container: `ghcr.io/pkgforge-dev/archlinux:latest` — a purpose-built, actively
-  maintained image from the same org that ships `quick-sharun`. Confirmed via
-  `docker manifest inspect`: genuinely multi-arch (`amd64`, `arm64`, `armv7`,
-  `riscv64`), so ARM support comes for free instead of needing ALARM.
-- Setup: [`pkgforge-dev/anylinux-setup-action`](https://github.com/pkgforge-dev/anylinux-setup-action)
-  — a composite action that inits `pacman-key`, syncs a baseline package set, and
-  installs three CLI tools (`quick-sharun`, `get-debloated-pkgs`, `make-aur-package`)
-  fetched from `Anylinux-AppImages@main`.
-- Build: a normal, **stable, released** `cargo tauri build --bundles deb` (no
-  experimental branch, no `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT` needed at all) — then the
-  app's own script extracts the `.deb`, assembles an `AppDir`, and calls `quick-sharun`
-  directly as a CLI tool against it.
-- `make-aur-package` already wraps the AUR build problem — `libappindicator-gtk3` becomes
-  a one-line call (`make-aur-package libappindicator-gtk3`) instead of hand-rolled
-  `makepkg`/build-user plumbing.
+- Container: `ghcr.io/pkgforge-dev/archlinux:latest` — a purpose-built, actively maintained image from the same org that ships `quick-sharun`. Confirmed via `docker manifest inspect`: genuinely multi-arch (`amd64`, `arm64`, `armv7`, `riscv64`), so ARM support comes for free instead of needing ALARM.
+- Setup: [`pkgforge-dev/anylinux-setup-action`](https://github.com/pkgforge-dev/anylinux-setup-action) — a composite action that inits `pacman-key`, syncs a baseline package set, and installs three CLI tools (`quick-sharun`, `get-debloated-pkgs`, `make-aur-package`) fetched from `Anylinux-AppImages@main`.
+- Build: a normal, **stable, released** `cargo tauri build --bundles deb` (no experimental branch, no `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT` needed at all) — then the app's own script extracts the `.deb`, assembles an `AppDir`, and calls `quick-sharun` directly as a CLI tool against it.
+- `make-aur-package` already wraps the AUR build problem — `libappindicator-gtk3` becomes a one-line call (`make-aur-package libappindicator-gtk3`) instead of hand-rolled `makepkg`/build-user plumbing.
 
-Route B decouples us entirely from the unmerged, floating Tauri PR branch. The only
-remaining floating dependency is `quick-sharun`/`get-debloated-pkgs`/`make-aur-package`
-themselves (still fetched from `main` by the setup action) — a smaller, more auditable
-surface than Route A, and it's the actual path the tool's own author runs and tests.
+Route B decouples us entirely from the unmerged, floating Tauri PR branch. The only remaining floating dependency is `quick-sharun`/`get-debloated-pkgs`/`make-aur-package` themselves (still fetched from `main` by the setup action) — a smaller, more auditable surface than Route A, and it's the actual path the tool's own author runs and tests.
 
 ### Comparison
 
@@ -130,18 +73,11 @@ surface than Route A, and it's the actual path the tool's own author runs and te
 
 ## Recommendation
 
-Pilot **Route B** first. It removes the specific thing most likely to be unstable (the
-unmerged Tauri branch and its own embedded, still-buggy `sharun.rs` integration), gets
-ARM64 for free from a container actually built for this purpose, and matches what the
-tool's own author demonstrably runs rather than a reimplementation we'd be maintaining
-alone. Route A is worth keeping as a fallback note, not a parallel pilot — validating both
-at once would make it harder to isolate what actually fixed (or didn't fix) the crash.
+Pilot **Route B** first. It removes the specific thing most likely to be unstable (the unmerged Tauri branch and its own embedded, still-buggy `sharun.rs` integration), gets ARM64 for free from a container actually built for this purpose, and matches what the tool's own author demonstrably runs rather than a reimplementation we'd be maintaining alone. Route A is worth keeping as a fallback note, not a parallel pilot — validating both at once would make it harder to isolate what actually fixed (or didn't fix) the crash.
 
 ## Pilot implementation
 
-No changes to this repository (`liminal-hq/.github`) are needed for the pilot. Route B
-points directly at `pkgforge-dev`'s own maintained container — there is no new shared
-Docker image to build or publish here. All changes live in the pilot repo's workflow.
+No changes to this repository (`liminal-hq/.github`) are needed for the pilot. Route B points directly at `pkgforge-dev`'s own maintained container — there is no new shared Docker image to build or publish here. All changes live in the pilot repo's workflow.
 
 **Pinned container:**
 
@@ -149,43 +85,22 @@ Docker image to build or publish here. All changes live in the pilot repo's work
 ghcr.io/pkgforge-dev/archlinux@sha256:f6fc7e14b0612a355d7ab50efb3cc40010ba28e4766860bd238d313b308f190b
 ```
 
-(resolved from `ghcr.io/pkgforge-dev/archlinux:latest` at pilot time; pinned by digest so
-the pilot doesn't drift out from under us the same way the current `feat/truly-portable-appimage`
-branch install does). Confirmed via `docker manifest inspect --verbose` that this is a
-genuine multi-arch index (`amd64`, `arm64`, `armv7`, `riscv64`); confirmed by extracting
-`/etc/pacman.conf` and `/etc/pacman.d/mirrorlist` from the `arm64` platform image directly
-(via `docker create` + `docker cp`, no execution needed since the host can't run foreign-arch
-binaries without QEMU) that pkgforge-dev isn't doing anything exotic for ARM — the `arm64`
-platform is literally **Arch Linux ARM (ALARM)**: `Architecture = aarch64`,
-`Server = http://mirror.archlinuxarm.org/$arch/$repo`. It's a standard Docker manifest
-list where each platform is served by whichever native Arch-family distro exists for that
-architecture (mainline Arch for `amd64`, ALARM for `arm64`/`armv7`), unified under one tag.
+(resolved from `ghcr.io/pkgforge-dev/archlinux:latest` at pilot time; pinned by digest so the pilot doesn't drift out from under us the same way the current `feat/truly-portable-appimage` branch install does). Confirmed via `docker manifest inspect --verbose` that this is a genuine multi-arch index (`amd64`, `arm64`, `armv7`, `riscv64`); confirmed by extracting `/etc/pacman.conf` and `/etc/pacman.d/mirrorlist` from the `arm64` platform image directly (via `docker create` + `docker cp`, no execution needed since the host can't run foreign-arch binaries without QEMU) that pkgforge-dev isn't doing anything exotic for ARM — the `arm64` platform is literally **Arch Linux ARM (ALARM)**: `Architecture = aarch64`, `Server = http://mirror.archlinuxarm.org/$arch/$repo`. It's a standard Docker manifest list where each platform is served by whichever native Arch-family distro exists for that architecture (mainline Arch for `amd64`, ALARM for `arm64`/`armv7`), unified under one tag.
 
 **Job 1 — Build (unchanged, existing `ci-desktop` image):**
 
-Same as today: `pnpm install --frozen-lockfile`, `pnpm release:version:check`,
-`cargo tauri build --bundles deb,rpm`, using the **stable, released** `tauri-cli` — no
-experimental branch, no `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT`. Upload the `.deb` as a build
-artifact. `.rpm` ships as-is, untouched by any of this.
+Same as today: `pnpm install --frozen-lockfile`, `pnpm release:version:check`, `cargo tauri build --bundles deb,rpm`, using the **stable, released** `tauri-cli` — no experimental branch, no `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT`. Upload the `.deb` as a build artifact. `.rpm` ships as-is, untouched by any of this.
 
 **Job 2 — Package the AppImage (new, pinned `pkgforge-dev/archlinux` container):**
 
 - Download the `.deb` artifact from Job 1
-- Run `pkgforge-dev/anylinux-setup-action` (composite action — `pacman-key --init`,
-  baseline package sync, installs `quick-sharun` / `get-debloated-pkgs` /
-  `make-aur-package` as CLI tools)
-- App-specific deps (note: use `-S --needed`, not a second `-Syu` — the setup action
-  already did a full sync+upgrade, and re-running `-Syu` immediately after it appeared to
-  knock `patchelf` back out during the pilot, breaking `quick-sharun`):
+- Run `pkgforge-dev/anylinux-setup-action` (composite action — `pacman-key --init`, baseline package sync, installs `quick-sharun` / `get-debloated-pkgs` / `make-aur-package` as CLI tools)
+- App-specific deps (note: use `-S --needed`, not a second `-Syu` — the setup action already did a full sync+upgrade, and re-running `-Syu` immediately after it appeared to knock `patchelf` back out during the pilot, breaking `quick-sharun`):
   ```sh
   pacman -S --noconfirm --needed webkit2gtk-4.1 gtk3 libayatana-appindicator patchelf
   get-debloated-pkgs --add-common --prefer-nano
   ```
-- App-specific AppDir assembly (layout confirmed to match Tauri's own `debian.rs` bundler
-  output: `usr/bin/<binary>`, `usr/share/applications/<name>.desktop`,
-  `usr/share/icons/hicolor/*/apps/<name>.png`). Pick a single icon rather than globbing —
-  Tauri ships multiple resolutions under the same basename, which collides with `cp`'s
-  just-created-file guard when copied in one invocation:
+- App-specific AppDir assembly (layout confirmed to match Tauri's own `debian.rs` bundler output: `usr/bin/<binary>`, `usr/share/applications/<name>.desktop`, `usr/share/icons/hicolor/*/apps/<name>.png`). Pick a single icon rather than globbing — Tauri ships multiple resolutions under the same basename, which collides with `cp`'s just-created-file guard when copied in one invocation:
   ```sh
   export OUTPATH=./dist   # quick-sharun writes to cwd if this isn't set
   ar xv emoji-nook_*.deb
@@ -202,44 +117,17 @@ artifact. `.rpm` ships as-is, untouched by any of this.
 
 **Validation — complete:**
 
-- Pilot repo: `emoji-nook`, `experiment/arch-quick-sharun-appimage` (this is where the
-  original crash was reproduced). Six iterations to green — see the branch history for
-  the specific bugs hit and fixed (artifact path, icon collision, the `patchelf`/`-Syu`
-  interaction, `OUTPATH`).
-- The resulting AppImage was downloaded and run directly on the machine that originally
-  hit the crash. Confirmed: no `EGL_BAD_PARAMETER`, process stable and idle after startup,
-  webview initialised and logged from the app's own JS. The only portal error present
-  (`bind_shortcuts ... Other`) is a pre-existing, separate issue — GNOME can't attribute a
-  GlobalShortcuts request to an ad hoc, unintegrated AppImage run without an installed
-  `.desktop` file, unrelated to this packaging change.
-- The `set -m`/tty issue reported upstream on 2026-06-30 is moot for this route since it
-  lives in Tauri's `sharun.rs`, which this route no longer uses, and did not reproduce in
-  `quick-sharun`'s own CLI path under GitHub Actions' non-interactive runners.
+- Pilot repo: `emoji-nook`, `experiment/arch-quick-sharun-appimage` (this is where the original crash was reproduced). Six iterations to green — see the branch history for the specific bugs hit and fixed (artifact path, icon collision, the `patchelf`/`-Syu` interaction, `OUTPATH`).
+- The resulting AppImage was downloaded and run directly on the machine that originally hit the crash. Confirmed: no `EGL_BAD_PARAMETER`, process stable and idle after startup, webview initialised and logged from the app's own JS. The only portal error present (`bind_shortcuts ... Other`) is a pre-existing, separate issue — GNOME can't attribute a GlobalShortcuts request to an ad hoc, unintegrated AppImage run without an installed `.desktop` file, unrelated to this packaging change.
+- The `set -m`/tty issue reported upstream on 2026-06-30 is moot for this route since it lives in Tauri's `sharun.rs`, which this route no longer uses, and did not reproduce in `quick-sharun`'s own CLI path under GitHub Actions' non-interactive runners.
 
 ## Reusable workflow
 
-Route B is being generalised into a `workflow_call` reusable workflow,
-`package-arch-appimage.yml`, hosted in this repository, rather than each consumer repo
-copy-pasting the pilot's YAML. It is intentionally **packaging-only** — it does not build
-the `.deb` itself. Consumer repos already build a `.deb` as part of their own release
-pipeline (e.g. `emoji-nook`'s existing `build-linux` job); duplicating that build inside
-the reusable workflow would waste CI time compiling the same Rust project twice per
-release. The reusable workflow instead takes an already-uploaded `.deb` artifact as input.
+Route B is being generalised into a `workflow_call` reusable workflow, `package-arch-appimage.yml`, hosted in this repository, rather than each consumer repo copy-pasting the pilot's YAML. It is intentionally **packaging-only** — it does not build the `.deb` itself. Consumer repos already build a `.deb` as part of their own release pipeline (e.g. `emoji-nook`'s existing `build-linux` job); duplicating that build inside the reusable workflow would waste CI time compiling the same Rust project twice per release. The reusable workflow instead takes an already-uploaded `.deb` artifact as input.
 
-Inputs: `deb-artifact-name` (required), `runs-on` (so the caller can matrix x64/arm64 the
-same way `build-linux` already does against the multi-arch pinned container),
-`app-version` (used for the AppImage filename — the pilot's own script never set this,
-producing `Emoji_Nook-UNKNOWN-anylinux-x86_64.AppImage`; fixed in the generalised version),
-`extra-pacman-packages`, `extra-aur-packages` (for the rare case a consumer genuinely needs
-one — the pilot ended up not needing this for `emoji-nook`, but it's cheap to keep as an
-escape hatch), and `arch-container-digest` (defaults to the pinned digest above, bump once
-here rather than per-repo). Output: `artifact-name`, so the caller knows what to download.
+Inputs: `deb-artifact-name` (required), `runs-on` (so the caller can matrix x64/arm64 the same way `build-linux` already does against the multi-arch pinned container), `app-version` (used for the AppImage filename — the pilot's own script never set this, producing `Emoji_Nook-UNKNOWN-anylinux-x86_64.AppImage`; fixed in the generalised version), `extra-pacman-packages`, `extra-aur-packages` (for the rare case a consumer genuinely needs one — the pilot ended up not needing this for `emoji-nook`, but it's cheap to keep as an escape hatch), and `arch-container-digest` (defaults to the pinned digest above, bump once here rather than per-repo). Output: `artifact-name`, so the caller knows what to download.
 
-It ends with its own step-summary write, matching the `Write summary` convention already
-used in `release.yml` and `shared-tauri-ci-images.yml` — the reusable workflow owns
-packaging-specific reporting (packages installed, `quick-sharun --test` outcome, output
-artifact), the caller can still add its own release-level summary on top, same split that
-already exists today between `build-linux`'s and `publish-release`'s summaries.
+It ends with its own step-summary write, matching the `Write summary` convention already used in `release.yml` and `shared-tauri-ci-images.yml` — the reusable workflow owns packaging-specific reporting (packages installed, `quick-sharun --test` outcome, output artifact), the caller can still add its own release-level summary on top, same split that already exists today between `build-linux`'s and `publish-release`'s summaries.
 
 Consumer usage (sketch, per architecture leg):
 
@@ -262,32 +150,19 @@ jobs:
     secrets: inherit
 ```
 
-And on the caller's existing `build-linux` job: drop `appimage` from
-`--bundles appimage,deb,rpm` (leaving `deb,rpm`) and drop
-`TAURI_BUNDLER_NEW_APPIMAGE_FORMAT` entirely — AppImage production moves fully to the new
-job, so that build no longer touches the experimental Tauri branch at all.
+And on the caller's existing `build-linux` job: drop `appimage` from `--bundles appimage,deb,rpm` (leaving `deb,rpm`) and drop `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT` entirely — AppImage production moves fully to the new job, so that build no longer touches the experimental Tauri branch at all.
 
 ## Explicitly deferred, not forgotten
 
-- Pinning `feat/truly-portable-appimage` to a commit SHA, and pre-seeding `quick-sharun.sh`
-  — both moot now that `ci-desktop`'s own build no longer needs that branch for AppImage
-  production. Still relevant if anything else in the shared images depends on that branch;
-  needs a check before closing this out entirely.
+- Pinning `feat/truly-portable-appimage` to a commit SHA, and pre-seeding `quick-sharun.sh` — both moot now that `ci-desktop`'s own build no longer needs that branch for AppImage production. Still relevant if anything else in the shared images depends on that branch; needs a check before closing this out entirely.
 - `tauri-dev-desktop` migration — interactive shell only, not urgent.
 - Mobile images — out of scope; unaffected by this bug.
-- Once the reusable workflow is live in `spindle` and `tauri-plugins-workspace` too,
-  revisit whether `ci-desktop`'s Dockerfile can drop the `feat/truly-portable-appimage`
-  branch install entirely.
+- Once the reusable workflow is live in `spindle` and `tauri-plugins-workspace` too, revisit whether `ci-desktop`'s Dockerfile can drop the `feat/truly-portable-appimage` branch install entirely.
 
 ## Open questions
 
-- `.rpm` output: still produced by the unchanged `build-linux` job (`--bundles deb,rpm`),
-  untouched by this change. No open question here after all — resolved by construction
-  once the reusable workflow only replaces the AppImage leg, not the whole build.
-- Multi-arch validation: the pilot only exercised the `x86_64` leg. The `arm64` container
-  platform (ALARM-backed) is confirmed to exist and be genuinely multi-arch, but hasn't
-  been run end-to-end yet — first real test should happen through the reusable workflow's
-  `runs-on: ubuntu-24.04-arm` matrix leg, not blind.
+- `.rpm` output: still produced by the unchanged `build-linux` job (`--bundles deb,rpm`), untouched by this change. No open question here after all — resolved by construction once the reusable workflow only replaces the AppImage leg, not the whole build.
+- Multi-arch validation: the pilot only exercised the `x86_64` leg. The `arm64` container platform (ALARM-backed) is confirmed to exist and be genuinely multi-arch, but hasn't been run end-to-end yet — first real test should happen through the reusable workflow's `runs-on: ubuntu-24.04-arm` matrix leg, not blind.
 
 ## References
 
@@ -295,5 +170,4 @@ job, so that build no longer touches the experimental Tauri branch at all.
 - `quick-sharun` / `Anylinux-AppImages`: <https://github.com/pkgforge-dev/Anylinux-AppImages>
 - Reference demo: <https://github.com/Samueru-sama/tabularis-appimage-demo>
 - Setup action: <https://github.com/pkgforge-dev/anylinux-setup-action>
-- Related: [`shared-image-layout.md`](../reference/shared-image-layout.md),
-  [`shared-image-implementation-spec.md`](../reference/shared-image-implementation-spec.md)
+- Related: [`shared-image-layout.md`](../reference/shared-image-layout.md), [`shared-image-implementation-spec.md`](../reference/shared-image-implementation-spec.md)
