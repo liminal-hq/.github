@@ -1,0 +1,11 @@
+{
+  "default": true,
+  // Long single-line paragraphs are intentional here (see AGENTS.md: don't
+  // manually hard-wrap markdown prose), so line-length is disabled outright.
+  "MD013": false,
+  // docs/reference/shared-image-layout.md intentionally repeats "### CI
+  // Images" / "### Dev Images" as sub-headings under two different parent
+  // sections ("Design Intent" and "Expected Environment Model"); only flag
+  // duplicate headings that share the same parent.
+  "MD024": { "siblings_only": true }
+}

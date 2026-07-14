@@ -13,3 +13,17 @@ Reusable workflow (`workflow_call`) that packages an already-built `.deb` into a
 
 - **Trigger:** `workflow_call` only.
 - **Docs:** [`../../docs/reference/package-arch-appimage.md`](../../docs/reference/package-arch-appimage.md) (usage, inputs/outputs, example call site) and [`../../docs/proposals/archived/arch-experimental-ci-image.md`](../../docs/proposals/archived/arch-experimental-ci-image.md) (why this approach was chosen)
+
+## `ci-lint.yml`
+
+Quality gate for this repo's own files: `actionlint` (with its built-in shellcheck integration) against workflow YAML, `hadolint` against `docker/ci/Dockerfile`, and `markdownlint-cli2` against all markdown docs. Blocking on PRs.
+
+- **Trigger:** `pull_request`.
+- **Config:** `../../.hadolint.yaml` (failure threshold set to `error` — a backlog of pre-existing `warning`-level hadolint findings is intentionally untriaged for now) and `../../.markdownlint.jsonc`.
+
+## `security-audit.yml`
+
+Runs [`zizmor`](https://docs.zizmor.sh/) against this repo's workflows and uploads findings as SARIF to the Security tab.
+
+- **Trigger:** `pull_request` and push to `main`.
+- **Non-blocking today:** `continue-on-error: true` on the zizmor step. The existing workflows carry an untriaged backlog of findings (unpinned actions, template-injection-shaped `run:` steps, one overly broad `permissions:` block) — findings are visible in the Security tab, but don't fail the check yet. Remove `continue-on-error` once that backlog is worked through.

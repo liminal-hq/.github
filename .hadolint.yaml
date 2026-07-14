@@ -1,0 +1,7 @@
+# Only fail CI on hadolint's `error` severity for now. `docker/ci/Dockerfile`
+# carries a backlog of `warning`-level findings (DL3008 unpinned apt package
+# versions, DL4006 missing `set -o pipefail`, DL3003 WORKDIR-vs-cd, DL4001
+# wget+curl both present) that haven't been triaged yet. Findings are still
+# reported in CI output; this just keeps the check green on the existing
+# baseline while still catching newly introduced `error`-level problems.
+failure-threshold: error

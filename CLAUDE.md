@@ -12,15 +12,18 @@ There is no app build/lint/test suite (no package.json, no source code to compil
 
 - **Workflow YAML changes** (`.github/workflows/*.yml`): validate syntax locally, e.g. `python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" .github/workflows/<file>.yml` or run it through `actionlint` if available.
 - **Docker/image changes** (`docker/ci/Dockerfile`): build the affected target(s) locally before considering the change verified, e.g.:
-  ```
+
+  ```sh
   docker build --target ci-desktop -f docker/ci/Dockerfile .
   docker build --target ci-mobile -f docker/ci/Dockerfile .
   docker build --target dev-desktop -f docker/ci/Dockerfile .
   docker build --target dev-mobile -f docker/ci/Dockerfile .
   ```
+
   Call out explicitly which targets were built and which were not (mobile/Android targets are slow due to SDK/NDK downloads).
 - **Smoke-testing a built image**: run `command -v cargo rustup node pnpm cargo-tauri gh` (add `sdkmanager java` for mobile targets) inside the built image — this mirrors the checks the `shared-tauri-ci-images.yml` workflow itself runs before publishing. See `docs/runbooks/image-publish-and-rollback.md` for the full contract-check list.
 - If full verification isn't possible in the current environment (e.g. no Docker, no GitHub Actions run), say so explicitly rather than assuming success.
+- `ci-lint.yml` runs these same checks automatically on every PR (actionlint/shellcheck, hadolint, markdownlint-cli2) — local verification above should already match what it reports. `.hadolint.yaml` and `.markdownlint.jsonc` hold the shared config/exceptions; see `.github/workflows/README.md` for what each check is currently blocking vs. tolerating.
 
 ## Architecture
 
@@ -46,9 +49,16 @@ Builds and pushes the four images above on push to `main` (when `docker/ci/**` o
 A `workflow_call`-only reusable workflow, called via `uses:` from a consumer repo's own release pipeline — not runnable standalone in this repo. It packages an already-built `.deb` (passed in as an artifact, not built here) into a Linux AppImage using `quick-sharun` on a pinned `ghcr.io/pkgforge-dev/archlinux` container, replacing Tauri's unmerged experimental AppImage bundler. Full inputs/outputs/usage example: `docs/reference/package-arch-appimage.md`. Rationale for Arch + `quick-sharun` over alternatives: `docs/proposals/archived/arch-experimental-ci-image.md`.
 
 Non-obvious operational gotchas baked into this workflow (don't undo them without re-reading why):
+
 - Never re-run `pacman -Syu` after the `anylinux-setup-action` setup step — it's already been done once, and a second run has been observed knocking `patchelf` back out.
 - `quick-sharun` needs `OUTPATH` set explicitly or it writes into the cwd instead of `dist/`.
 - Only one app icon is copied into the AppDir (largest, via sorted `find`), not a glob — Tauri's `.deb` ships multiple resolutions under the same basename, which collides with `cp`'s overwrite guard.
+
+### Quality gates (`.github/workflows/ci-lint.yml`, `.github/workflows/security-audit.yml`, `.github/dependabot.yml`)
+
+- `ci-lint.yml`: blocking PR check — actionlint (with built-in shellcheck) on workflow YAML, hadolint on the Dockerfile, markdownlint-cli2 on docs. Thresholds are deliberately loose (`.hadolint.yaml` only fails on `error` severity, `fail_level: error` for actionlint/shellcheck) to keep today's pre-existing warnings from blocking unrelated PRs — don't tighten these without triaging the existing backlog first.
+- `security-audit.yml`: runs `zizmor` against the workflows and uploads SARIF to the Security tab, but the step has `continue-on-error: true` — the existing workflows have ~60 untriaged zizmor findings (mostly actions pinned by tag instead of hash, plus a few template-injection-shaped `run:` steps and one overly broad `permissions:` block). Don't remove `continue-on-error` without working through that backlog first.
+- `dependabot.yml`: configured for `github-actions` and the `docker/ci` Dockerfile on a monthly cadence, but `open-pull-requests-limit: 0` on both — intentionally inactive until someone raises the limit.
 
 ### Docs layout
 

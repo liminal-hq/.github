@@ -10,7 +10,7 @@ Status: **validated and implemented.** Route B selected, piloted in `emoji-nook`
 
 `quick-sharun` is built and tested primarily for **Arch Linux**. Its own maintainer has said as much directly in the PR thread: *"it is meant to be used on archlinux only... it can be used on ubuntu but I only know that because one person used it there lol."* Our current `ci-base`/`ci-toolchain` stages are Ubuntu 24.04. This produces AppImages that fail at runtime with:
 
-```
+```text
 Could not create default EGL display: EGL_BAD_PARAMETER. Aborting...
 ```
 

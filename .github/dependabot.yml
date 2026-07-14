@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Wired in with a monthly cadence but intentionally inactive
+  # (open-pull-requests-limit: 0) until we're ready to start acting on
+  # update PRs. Raise the limit above 0 per ecosystem to turn it on.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: "docker"
+    directory: "/docker/ci"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0
+    cooldown:
+      default-days: 7
