@@ -13,6 +13,10 @@ Liminal HQ is an independent studio building local-first software for calm, dura
   - [Coherence Chat Exporter](https://github.com/liminal-hq/coherence-chat-exporter) — archive AI conversations into portable Markdown.
 - **System tools**
   - [SMDU](https://github.com/liminal-hq/smdu) — terminal disk usage analyser.
+- **Desktop tools**
+  - [Emoji Nook](https://github.com/liminal-hq/emoji-nook) — native Linux emoji picker that blends with your desktop.
+- **Media tools**
+  - [Spindle](https://github.com/liminal-hq/spindle) — desktop optical-disc authoring studio.
 - **Developer tools**
   - [Flow](https://github.com/liminal-hq/flow) — terminal-native working memory for developers.
 - **Platform and infrastructure**
