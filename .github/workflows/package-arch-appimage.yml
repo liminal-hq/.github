@@ -1,0 +1,126 @@
+name: Package AppImage (Arch, quick-sharun)
+
+# Reusable workflow implementing Route B from
+# docs/proposals/arch-experimental-ci-image.md.
+#
+# Packaging-only: takes an already-built .deb as input rather than building
+# it, since consumer repos already build one as part of their own release
+# pipeline. Uses the stable, released tauri-cli's .deb output plus
+# quick-sharun directly, matching quick-sharun's own maintainer's published
+# pattern, instead of Tauri's unmerged feat/truly-portable-appimage branch.
+
+on:
+  workflow_call:
+    inputs:
+      deb-artifact-name:
+        description: Name of an already-uploaded artifact containing the .deb to package
+        required: true
+        type: string
+      runs-on:
+        description: Runner label, matrixed by the caller for multi-arch (e.g. ubuntu-24.04, ubuntu-24.04-arm)
+        required: false
+        type: string
+        default: ubuntu-24.04
+      app-version:
+        description: Version string used in the output AppImage filename
+        required: false
+        type: string
+        default: ''
+      extra-pacman-packages:
+        description: Space-separated official-repo packages the app needs beyond the shared baseline
+        required: false
+        type: string
+        default: 'webkit2gtk-4.1 gtk3 libayatana-appindicator patchelf'
+      extra-aur-packages:
+        description: Space-separated AUR packages, built via make-aur-package, if the app needs one not in the official repos
+        required: false
+        type: string
+        default: ''
+      arch-container-digest:
+        description: Pinned ghcr.io/pkgforge-dev/archlinux digest - bump centrally here, not per consumer repo
+        required: false
+        type: string
+        default: 'sha256:f6fc7e14b0612a355d7ab50efb3cc40010ba28e4766860bd238d313b308f190b'
+    outputs:
+      artifact-name:
+        description: Name of the uploaded AppImage artifact
+        value: ${{ jobs.package-appimage.outputs.artifact-name }}
+
+jobs:
+  package-appimage:
+    name: Package AppImage
+    runs-on: ${{ inputs.runs-on }}
+    container:
+      image: ghcr.io/pkgforge-dev/archlinux@${{ inputs.arch-container-digest }}
+    outputs:
+      artifact-name: ${{ steps.set-name.outputs.name }}
+    steps:
+      - name: Download .deb artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.deb-artifact-name }}
+          path: ./deb-input
+
+      - name: Prepare container (Anylinux tools)
+        uses: pkgforge-dev/anylinux-setup-action@8872fabe63f9a00b35e25b2f46da62a05afc9a7d # v1
+
+      - name: Install app-specific dependencies
+        id: deps
+        run: |
+          set -eu
+          # -S --needed, not -Syu: the setup action already did a full sync+upgrade.
+          # Running -Syu again immediately after was observed knocking patchelf back
+          # out during the initial emoji-nook pilot, breaking quick-sharun.
+          pacman -S --noconfirm --needed ${{ inputs.extra-pacman-packages }}
+          get-debloated-pkgs --add-common --prefer-nano
+          for pkg in ${{ inputs.extra-aur-packages }}; do
+            make-aur-package "$pkg"
+          done
+
+      - name: Assemble AppDir and build the AppImage
+        id: assemble
+        env:
+          OUTPATH: ./dist
+          VERSION: ${{ inputs.app-version }}
+        run: |
+          set -eu
+          mkdir -p work
+          cd work
+          cp ../deb-input/*.deb ./app.deb
+          ar xv ./app.deb
+          tar xf ./data.tar.*
+          mv usr AppDir
+          cp AppDir/share/applications/*.desktop AppDir/
+          # Pick one icon, not a glob: Tauri ships several resolutions under the
+          # same basename, which collides with cp's just-created-file guard.
+          icon="$(find AppDir/share/icons/hicolor -name '*.png' | sort -V | tail -1)"
+          if [ -n "$icon" ]; then cp "$icon" AppDir/; fi
+          quick-sharun ./AppDir/bin/*
+          quick-sharun --make-appimage
+          quick-sharun --test ./dist/*.AppImage
+
+      - id: set-name
+        run: echo "name=appimage-${{ inputs.runs-on }}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: appimage-${{ inputs.runs-on }}
+          path: work/dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Write summary
+        if: always()
+        run: |
+          {
+            echo "## Arch AppImage Packaging Summary"
+            echo
+            echo "- Runner: \`${{ inputs.runs-on }}\`"
+            echo "- Container: \`ghcr.io/pkgforge-dev/archlinux@${{ inputs.arch-container-digest }}\`"
+            echo "- Deb source artifact: \`${{ inputs.deb-artifact-name }}\`"
+            echo "- Extra pacman packages: \`${{ inputs.extra-pacman-packages }}\`"
+            echo "- Extra AUR packages: \`${{ inputs.extra-aur-packages || '(none)' }}\`"
+            echo "- Dependency install: \`${{ steps.deps.outcome }}\`"
+            echo "- Assembly and quick-sharun: \`${{ steps.assemble.outcome }}\`"
+            echo "- Output artifact: \`${{ steps.set-name.outputs.name }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
