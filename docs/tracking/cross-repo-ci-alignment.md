@@ -4,18 +4,22 @@
 
 - [x] Wave 0: Baseline and decision lock
 - [x] Wave 1: Shared image production in `liminal-hq/.github`
-- [ ] Wave 2: `tauri-plugins-workspace` migration
-- [ ] Wave 3: `threshold` migration
-- [ ] Wave 4: `emoji-nook` migration
-- [ ] Wave 5: `liminal-notes` migration
-- [ ] Wave 6: Cross-repo normalisation
+- [x] Wave 2: `tauri-plugins-workspace` migration
+- [x] Wave 3: `spindle` migration
+- [x] Wave 4: `emoji-nook` migration
+- [x] Wave 5: `foyer` migration
+- [x] Wave 6: `threshold` migration
+- [ ] Wave 7: `liminal-notes` migration
+- [ ] Wave 8: Cross-repo normalisation
 
 ## Repositories
 
-- [ ] `liminal-hq/tauri-plugins-workspace`
-- [ ] `liminal-hq/threshold`
-- [ ] `liminal-hq/emoji-nook`
-- [ ] `ScottMorris/liminal-notes`
+- [x] `liminal-hq/tauri-plugins-workspace` — `ci.yml` consumes `tauri-ci-desktop:latest`
+- [x] `liminal-hq/spindle` — `ci.yml` and `release.yml` consume `tauri-ci-desktop:latest`
+- [x] `liminal-hq/emoji-nook` — `ci.yml` and `release.yml` consume `tauri-ci-desktop:latest`
+- [x] `liminal-hq/foyer` — `test.yml` consumes `tauri-ci-mobile:latest`
+- [x] `liminal-hq/threshold` — `test.yml` and `release-build.yml` consume `tauri-ci-mobile:latest`
+- [ ] `ScottMorris/liminal-notes` — still maintains its own parallel `build-ci-images.yml`; has not adopted the shared images
 
 ## Monthly Alignment Notes
 
@@ -23,3 +27,4 @@
 | --- | --- | --- | --- |
 | 2026-03-08 | Node 24.14.0, Rust 1.93.0, Java 17, Android 36 / NDK 28.2.13676358 | Initial baseline | Bootstrap shared infra |
 | 2026-03-15 | Node 24.14.0, Rust 1.93.0, Java 17, Android 36 / NDK 28.2.13676358 | Baseline active; dev image split in progress on implementation branch | Close stale bootstrap issues, keep rollout tracker active, begin CI/dev image family split |
+| 2026-07-14 | Node 24 (patch unpinned), pnpm 10.28.2, Rust 1.96.1, Java 17, Android 36 / NDK 28.2.13676358 | Rust bumped 1.93.0 → 1.96.1 since last note; four-month gap in this table with no monthly update in between. Audit found `tauri-plugins-workspace`, `spindle`, `emoji-nook`, `foyer`, and `threshold` already consuming the shared images — ahead of what the wave checklist previously showed. `liminal-notes` confirmed still on its own parallel image-build workflow, not the shared images. All five migrated consumers pin to the `:latest` tag rather than a versioned tag. | Decide whether `liminal-notes`'s parallel infra is an intentional divergence or outstanding migration work; consider whether consumers should pin a versioned image tag instead of `:latest`; resume monthly cadence on this table |
