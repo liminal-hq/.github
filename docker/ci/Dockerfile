@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends \
     git gh file build-essential pkg-config patchelf \
     libssl-dev libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
-    libayatana-appindicator3-dev librsvg2-dev xdg-utils unzip \
+    libayatana-appindicator3-dev librsvg2-dev xdg-utils zip unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # CI toolchain: pinned Node, pnpm, Rust, and Tauri tooling for shared CI images.
@@ -133,7 +133,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends \
     git gh file build-essential pkg-config patchelf \
     libssl-dev libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
-    libayatana-appindicator3-dev librsvg2-dev xdg-utils unzip \
+    libayatana-appindicator3-dev librsvg2-dev xdg-utils zip unzip \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-bad fonts-noto-color-emoji \
     xvfb vim \
     && rm -rf /var/lib/apt/lists/*
