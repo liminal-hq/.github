@@ -1,71 +1,79 @@
 # Shared Image Implementation Spec
 
-This document describes the intended implementation and operating contract for the shared Tauri image families published from this repository.
+This document describes the intended implementation and operating contract for the shared image families published from this repository.
 
 It exists to make the image architecture, stage layout, workflow responsibilities, and verification expectations explicit for maintainers and downstream consumers.
 
 ## Scope
 
-The shared image system covers two related image families:
+The shared image system covers two related image families, each built from granular single-concern tiers:
 
 1. CI images for automated pipelines
-2. Dev images for devcontainers and interactive local development
+2. Dev images for devcontainers, interactive local development, and host-side toolbox use
 
 Published image set:
 
 | Image | Docker target | Primary use |
 | --- | --- | --- |
-| `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | Desktop CI jobs |
+| `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Pure-Rust CI jobs |
+| `ghcr.io/liminal-hq/ci-web` | `ci-web` | JS/TS-only CI jobs |
+| `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | Tauri desktop CI jobs |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | Android/mobile CI jobs |
+| `ghcr.io/liminal-hq/dev-rust` | `dev-rust` | Pure-Rust devcontainers and toolbox use |
+| `ghcr.io/liminal-hq/dev-web` | `dev-web` | JS/TS devcontainers and toolbox use |
 | `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | Desktop devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-mobile` | `dev-mobile` | Android/mobile devcontainers |
 
-The platform contract is intentionally asymmetric today: `tauri-ci-desktop` publishes both `linux/amd64` and `linux/arm64`, while the mobile and dev image families currently publish `linux/amd64` only.
+The platform contract is intentionally asymmetric: the `ci-rust`, `ci-web`, and `tauri-ci-desktop` images publish both `linux/amd64` and `linux/arm64`, while the mobile and dev image families currently publish `linux/amd64` only.
 
 ## Design Goals
 
-1. Keep the CI image family stable for current consumers.
-2. Add devcontainer-oriented images without forcing CI images to absorb interactive-user assumptions.
-3. Keep version pins aligned across CI and dev families.
+1. Keep every published image single-concern-per-tier: consumers pull exactly the toolchain they need and nothing heavier.
+2. Keep the pre-existing `tauri-ci-*` / `tauri-dev-*` names, environment models, and tag policy stable for current consumers.
+3. Keep version pins aligned across all tiers and both families through shared `ARG` values.
 4. Make Docker targets and published image names easy to reason about.
-5. Catch regressions during publication with lightweight smoke validation.
+5. Catch regressions during publication with per-tier smoke validation, including leanness checks on the lean tiers.
 
 ## Dockerfile Architecture
 
-The shared Dockerfile intentionally separates:
-
-- intermediate setup stages
-- final CI targets
-- final dev targets
+The shared Dockerfile builds two parallel tier chains. Each tier adds exactly one concern to its parent; GUI/Tauri system libraries live only in the desktop tiers.
 
 ### Stage Layout
 
 #### CI stages
 
-- `ci-base`
-  - Ubuntu-based shared package baseline for Tauri desktop CI builds
-- `ci-toolchain`
-  - installs pinned Node, pnpm, Rust, `cargo-nextest`, and `cargo-tauri`
-  - uses root-friendly tool paths
+- `ci-base` (unpublished)
+  - Ubuntu base with universal CLI tooling only: certificates, curl/wget, git, gh, file, build-essential, pkg-config, zip/unzip
+- `ci-rust`
+  - adds the pinned Rust toolchain, clippy, rustfmt, and `cargo-nextest`
+  - root-friendly tool paths under `/usr/local`
+- `ci-web`
+  - adds pinned Node, pnpm, and Bun on `ci-base` (no Rust)
 - `ci-desktop`
-  - final desktop CI image
+  - builds on `ci-rust`
+  - adds the JS runtimes (same pins as `ci-web`), the GTK/webkit2gtk/appindicator/rsvg system stack, patchelf/xdg-utils/libssl-dev, GStreamer (base + bad), emoji fonts, xvfb, and `cargo-tauri`
 - `ci-mobile`
-  - final mobile CI image
-  - extends the CI toolchain with Java, Android SDK/NDK, and Android Rust targets
+  - builds on `ci-desktop`
+  - adds Java, Android SDK/NDK, and Android Rust targets
 
 #### Dev stages
 
-- `dev-base`
-  - devcontainer-oriented base image
-  - interactive development packages and desktop-friendly tooling
-- `dev-toolchain`
-  - installs pinned Node, pnpm, Rust, `cargo-nextest`, and `cargo-tauri`
-  - uses a Threshold-style non-root home-directory tool layout
+- `dev-base` (unpublished)
+  - devcontainer-oriented base image with universal CLI tooling and interactive quality-of-life packages (vim, ripgrep, fd, jq)
+- `dev-rust`
+  - adds the pinned Rust toolchain, clippy, rustfmt, and `cargo-nextest` under the user home
+- `dev-web`
+  - adds pinned Node, pnpm, and Bun with user-home tool paths (no Rust)
 - `dev-desktop`
-  - final desktop devcontainer image
+  - builds on `dev-rust`
+  - adds the JS runtimes, the GUI system stack, GStreamer/xvfb/emoji fonts, X11 inspection tools (xprop/xev via x11-utils, wmctrl, xdotool), and `cargo-tauri`
 - `dev-mobile`
-  - final mobile devcontainer image
-  - extends the dev toolchain with Java, Android SDK/NDK, and Android Rust targets
+  - builds on `dev-desktop`
+  - adds Java and Android SDK/NDK under the user home
+
+### JS runtime duplication
+
+The Node + pnpm + Bun install block appears in both the web tier and the Tauri desktop tier of each family. This is deliberate: single inheritance cannot give the desktop tier two parents, and every install site consumes the same shared `ARG` pins (`NODE_MAJOR`, `PNPM_VERSION`, `BUN_VERSION`), so versions cannot drift between tiers.
 
 ## Environment Model
 
@@ -75,46 +83,42 @@ CI images remain root-friendly and automation-oriented.
 
 Expected paths:
 
-- `RUSTUP_HOME=/usr/local/rustup`
-- `CARGO_HOME=/usr/local/cargo`
+- Rust tiers (`ci-rust`, `ci-desktop`, `ci-mobile`):
+  - `RUSTUP_HOME=/usr/local/rustup`
+  - `CARGO_HOME=/usr/local/cargo`
+- JS tiers (`ci-web`, `ci-desktop`, `ci-mobile`):
+  - `BUN_INSTALL=/usr/local/bun`
 - mobile images:
   - `ANDROID_HOME=/opt/android-sdk`
   - `ANDROID_SDK_ROOT=/opt/android-sdk`
 
 ### Dev images
 
-Dev images are optimised for non-root devcontainer use.
+Dev images are optimised for non-root devcontainer and toolbox use.
 
 Expected paths:
 
 - `HOME=/home/vscode`
-- `RUSTUP_HOME=$HOME/.rustup`
-- `CARGO_HOME=$HOME/.cargo`
-- `PNPM_HOME=$HOME/.local/share/pnpm`
-- mobile images:
-  - `ANDROID_HOME=$HOME/Android/Sdk`
-  - `ANDROID_SDK_ROOT=$HOME/Android/Sdk`
+- Rust tiers: `RUSTUP_HOME=$HOME/.rustup`, `CARGO_HOME=$HOME/.cargo`
+- JS tiers: `PNPM_HOME=$HOME/.local/share/pnpm`, `BUN_INSTALL=$HOME/.bun`
+- mobile images: `ANDROID_HOME=$HOME/Android/Sdk`, `ANDROID_SDK_ROOT=$HOME/Android/Sdk`
 
-Dev images should pre-create writable user-owned directories for:
-
-- `.cargo`
-- `.rustup`
-- `.local/share/pnpm`
-- `Android/Sdk` where applicable
+Dev images should pre-create writable user-owned directories for the tool paths their tier owns (`.cargo`/`.rustup` on Rust tiers, `.local/share/pnpm` on JS tiers, `Android/Sdk` where applicable).
 
 ## Shared Versioning Rules
 
-The image families should stay aligned on:
+The image tiers stay aligned on:
 
 - Ubuntu baseline
 - Node major version
 - pnpm version
+- Bun version
 - Rust toolchain version
 - Android command-line tools version
 - Android platform, build-tools, and NDK versions
 - Tauri CLI source and branch
 
-When these values change, update them centrally in the shared Dockerfile rather than drifting CI and dev families independently.
+When these values change, update them centrally in the shared Dockerfile `ARG`s rather than drifting tiers or families independently.
 
 ## Workflow Contract
 
@@ -123,13 +127,13 @@ The shared image publication workflow is responsible for:
 1. evaluating the publish cadence
 2. publishing all intended image families
 3. applying a consistent tag policy
-4. running smoke validation before push
+4. running smoke validation (via `docker/ci/smoke-check.sh`) before push
 5. reusing persistent build cache across runs
 6. writing digest and tag summaries for each image
 
 ### Cadence
 
-- Pushes to `main` that touch the Dockerfile or workflow should publish.
+- Pushes to `main` that touch `docker/ci/**` or the workflow should publish.
 - Manual dispatch should publish.
 - Scheduled runs should follow the configured bi-weekly cadence gate.
 
@@ -137,68 +141,36 @@ The shared image publication workflow is responsible for:
 
 Each published image should receive:
 
-1. `latest`
+1. `latest` (on `main`) or `staging` (on other refs)
 2. `sha-<commit>`
-3. `YYYYMMDD`
+3. `YYYYMMDD` (scheduled runs)
 
 ### Platform policy
 
-Initial expected platform coverage:
-
 | Image | Platforms |
 | --- | --- |
+| `ci-rust` | `linux/amd64`, `linux/arm64` |
+| `ci-web` | `linux/amd64`, `linux/arm64` |
 | `tauri-ci-desktop` | `linux/amd64`, `linux/arm64` |
 | `tauri-ci-mobile` | `linux/amd64` |
+| `dev-rust` | `linux/amd64` |
+| `dev-web` | `linux/amd64` |
 | `tauri-dev-desktop` | `linux/amd64` |
 | `tauri-dev-mobile` | `linux/amd64` |
 
-The `linux/arm64` desktop CI variant is required by downstream Linux ARM release jobs that run on `ubuntu-24.04-arm`.
+The `linux/arm64` CI variants are required by downstream Linux ARM jobs that run on `ubuntu-24.04-arm` (desktop releases, Rust release builds, and ARM binary-compile jobs).
+
+Multi-platform CI images build each platform natively (amd64 on `ubuntu-24.04`, arm64 on `ubuntu-24.04-arm`), push by digest, and merge digests into one manifest — QEMU emulation of the from-source cargo installs is deliberately avoided.
 
 If multi-arch dev images or mobile images become necessary later, that should be treated as an explicit follow-up rather than assumed by default.
 
 ## Smoke Validation Contract
 
-Publication should validate the image before pushing it.
+Publication validates every image before pushing it, using the per-tier profiles in `docker/ci/smoke-check.sh`. The profiles enforce three kinds of contract:
 
-### CI desktop
-
-Minimum checks:
-
-- `cargo`
-- `rustup`
-- `node`
-- `pnpm`
-- `cargo-tauri`
-- `gh`
-- version commands for core tooling
-
-### CI mobile
-
-Minimum checks:
-
-- CI desktop checks
-- `sdkmanager`
-- `java`
-- Android version command checks
-
-### Dev desktop
-
-Minimum checks:
-
-- CI desktop checks
-- confirm effective user is non-root
-- confirm user-home tool paths are set correctly
-- confirm writable paths for Cargo and pnpm locations
-
-### Dev mobile
-
-Minimum checks:
-
-- dev desktop checks
-- confirm Android SDK path is under the devcontainer user home
-- confirm writable Android path access
-- `sdkmanager`
-- `java`
+1. **Tool availability** — the tier's tools exist and respond to `--version` (`cargo`/`rustup`/`cargo-nextest` on Rust tiers; `node`/`pnpm`/`bun` on JS tiers; `cargo-tauri` on Tauri tiers; `sdkmanager`/`java` on mobile tiers; `gh` everywhere).
+2. **Leanness** — lean CI tiers must not contain other tiers' toolchains (`ci-rust` has no Node or Bun; `ci-web` has no cargo).
+3. **Dev ergonomics** — dev images run as a non-root user, expose the expected user-home environment variables, and have writable tool paths.
 
 ## GitHub CLI Authentication
 
@@ -220,7 +192,7 @@ Expected behaviour:
 - publish builds write the refreshed cache back to the registry for future runs
 - cache references stay image-specific rather than sharing one global cache across all targets
 
-This keeps repeat runs faster while avoiding cache collisions between desktop, mobile, CI, and dev image families.
+Because the tiers share ancestor stages (`ci-base`, `ci-rust`, `dev-base`, `dev-rust`), per-image caches will contain overlapping layers; this is expected and keeps cache keys simple. Repeat runs stay fast while avoiding cache collisions between image families.
 
 ## Smoke Build Strategy
 
@@ -229,10 +201,8 @@ Smoke validation should use Buildx rather than a separate plain `docker build`.
 Expected behaviour:
 
 - smoke builds load a single-platform image into the local Docker engine for `docker run` validation
-- smoke validation targets the runner-compatible platform only
-- final publish builds remain the place where multi-platform images are assembled and pushed
-
-This avoids maintaining two disconnected build paths and improves cache reuse between smoke validation and the final publish step.
+- smoke validation targets the runner-compatible platform only (each platform of a multi-arch image is smoke-checked on its own native runner)
+- final publish builds remain the place where multi-platform manifests are assembled and pushed
 
 ## Documentation Contract
 
@@ -243,13 +213,20 @@ When the shared image layout changes, keep these docs aligned:
 - `docs/reference/shared-image-implementation-spec.md`
 - `docs/runbooks/image-publish-and-rollback.md`
 
-The layout doc should explain the image family from a consumer perspective.
+The layout doc should explain the image tiers from a consumer perspective.
 
 This implementation spec should explain the architecture and maintainer contract.
 
 The runbook should explain how to publish, validate, roll back, and consume the images operationally.
 
 ## Consumer Guidance
+
+Pick the leanest tier that covers the repo's toolchain:
+
+- Pure Rust: `ci-rust` / `dev-rust`
+- JS/TS only: `ci-web` / `dev-web`
+- Tauri desktop (pnpm or Bun): `tauri-ci-desktop` / `tauri-dev-desktop`
+- Tauri Android/mobile: `tauri-ci-mobile` / `tauri-dev-mobile`
 
 Use the CI images when:
 
@@ -259,7 +236,7 @@ Use the CI images when:
 
 Use the dev images when:
 
-- the workload is a devcontainer
+- the workload is a devcontainer or an interactive host-side toolbox container
 - the default user is non-root
 - writable tool paths are needed without repo-local overrides
 - interactive local development ergonomics matter
@@ -268,7 +245,8 @@ Use the dev images when:
 
 These items are intentionally out of scope for the shared image contract unless a later issue expands the design:
 
+- per-JS-runtime image splits (`ci-bun` / `ci-node-pnpm`) — both runtimes ship together in the JS tiers
 - emulator tooling in the mobile dev image
-- repo-specific developer customisations
+- repo-specific developer customisations (e.g. ffmpeg for codec validation — layer those in the consuming repo)
 - per-repo mounted cache contracts as a required baseline
 - automatic downstream rollout to consumer repositories

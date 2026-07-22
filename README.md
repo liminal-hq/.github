@@ -8,29 +8,35 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 
 - Shared GitHub Actions workflows for CI image publication
 - Shared, reusable GitHub Actions workflows consumer repos call directly (e.g. AppImage packaging)
-- Shared Docker images for Tauri desktop and mobile workloads
+- Shared Docker images in granular tiers: pure Rust, JS/TS, Tauri desktop, and Tauri mobile
 - Runbooks for publish, rollback, and digest pinning
 
 ## Shared Images
 
-- `ghcr.io/liminal-hq/tauri-ci-desktop`
-- `ghcr.io/liminal-hq/tauri-ci-mobile`
-- `ghcr.io/liminal-hq/tauri-dev-desktop`
-- `ghcr.io/liminal-hq/tauri-dev-mobile`
+Pick the leanest tier that covers the repo's toolchain:
+
+- `ghcr.io/liminal-hq/ci-rust` — Rust toolchain + clippy/rustfmt/cargo-nextest (pure-Rust CI)
+- `ghcr.io/liminal-hq/ci-web` — Node + pnpm + Bun (JS/TS-only CI)
+- `ghcr.io/liminal-hq/tauri-ci-desktop` — Rust + JS runtimes + Tauri desktop system stack
+- `ghcr.io/liminal-hq/tauri-ci-mobile` — desktop stack + Java + Android SDK/NDK
+- `ghcr.io/liminal-hq/dev-rust` — Rust toolchain for devcontainers/toolbox use
+- `ghcr.io/liminal-hq/dev-web` — JS runtimes for devcontainers/toolbox use
+- `ghcr.io/liminal-hq/tauri-dev-desktop` — Tauri desktop devcontainers
+- `ghcr.io/liminal-hq/tauri-dev-mobile` — Tauri Android devcontainers
 
 ## Platform Support
 
-- `tauri-ci-desktop` publishes `linux/amd64` and `linux/arm64`.
+- `ci-rust`, `ci-web`, and `tauri-ci-desktop` publish `linux/amd64` and `linux/arm64`.
 - `tauri-ci-mobile` currently publishes `linux/amd64` only.
-- `tauri-dev-desktop` currently publishes `linux/amd64` only.
-- `tauri-dev-mobile` currently publishes `linux/amd64` only.
+- Dev images (`dev-rust`, `dev-web`, `tauri-dev-desktop`, `tauri-dev-mobile`) currently publish `linux/amd64` only.
 
-The ARM variant exists today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release jobs that consume `tauri-ci-desktop`.
+The ARM variants exist today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release and binary-compile jobs.
 
 ## Image Families
 
 - CI images are for GitHub Actions and other automated pipelines that want a lean, root-friendly toolchain baseline.
-- Dev images are for devcontainers and interactive local work, with a non-root user-home layout for Cargo, Rustup, pnpm, and Android tooling.
+- Dev images are for devcontainers and interactive local work — including host-side toolbox use — with a non-root user-home layout for Cargo, Rustup, pnpm, Bun, and Android tooling.
+- Every tier that carries JavaScript tooling ships both pnpm (via Node) and Bun, so pnpm-based and Bun-based repos use the same images.
 - Both image families include the GitHub CLI (`gh`) for release, issue, and workflow operations that run inside the shared containers.
 
 ## GitHub CLI Auth
@@ -46,8 +52,12 @@ The ARM variant exists today to support downstream Linux ARM runners such as `ub
 ## Layout Scheme
 
 - Docker targets:
+  - `ci-rust`
+  - `ci-web`
   - `ci-desktop`
   - `ci-mobile`
+  - `dev-rust`
+  - `dev-web`
   - `dev-desktop`
   - `dev-mobile`
 - Shared image layout reference: [`docs/reference/shared-image-layout.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-layout.md)
