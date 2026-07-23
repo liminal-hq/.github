@@ -11,6 +11,22 @@
 - [x] Wave 6: `threshold` migration
 - [ ] Wave 7: `liminal-notes` migration
 - [ ] Wave 8: Cross-repo normalisation
+- [ ] Wave 9: Granular tier rollout (`ci-rust` / `ci-web` / Bun-in-Tauri-images; see liminal-hq/.github#22)
+
+## Granular Tier Adoption Targets (issue #22)
+
+- [ ] `liminal-hq/flow` → `ci-rust`
+- [ ] `liminal-hq/flicker` → `ci-rust`
+- [ ] `liminal-hq/libhdmv` → `ci-rust`
+- [ ] `liminal-hq/libvc1` → `ci-rust` (CI) and `dev-rust` (local toolchain container)
+- [ ] `liminal-hq/mudroom` → `ci-rust` (no CI today; adopt when CI is added)
+- [ ] `liminal-hq/smdu` → `ci-web` (Linux jobs)
+- [ ] `liminal-hq/coherence-chat-exporter` → `ci-web` (Linux jobs)
+- [ ] `liminal-hq/the-lab` → `ci-web`
+- [ ] `liminal-hq/liminal-hq.github.io` → `ci-web`
+- [ ] `liminal-hq/foyer` → drop per-run Bun install (Bun now in `tauri-ci-mobile`)
+- [ ] `liminal-hq/threshold` → move desktop jobs into `tauri-ci-desktop` (GStreamer/xvfb/fonts now included)
+- [ ] `ScottMorris/city-sim-1000` → `tauri-ci-desktop` (drops per-run webkit apt installs)
 
 ## Repositories
 

@@ -1,4 +1,4 @@
-name: Shared Tauri CI Images
+name: Shared CI and Dev Images
 
 on:
   push:
@@ -16,10 +16,6 @@ permissions:
 
 env:
   IMAGE_NAMESPACE: ghcr.io/liminal-hq
-  CI_DESKTOP_IMAGE: tauri-ci-desktop
-  CI_MOBILE_IMAGE: tauri-ci-mobile
-  DEV_DESKTOP_IMAGE: tauri-dev-desktop
-  DEV_MOBILE_IMAGE: tauri-dev-mobile
 
 jobs:
   cadence:
@@ -54,6 +50,7 @@ jobs:
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "Skipping this scheduled run to keep a two-week publish cadence." >> "${GITHUB_STEP_SUMMARY}"
 
+  # Single-platform images build, smoke-check, and push in one matrixed job.
   publish-images:
     name: Publish ${{ matrix.label }}
     runs-on: ubuntu-latest
@@ -72,6 +69,18 @@ jobs:
             platforms: linux/amd64
             smoke_platform: linux/amd64
             smoke_profile: ci-mobile
+          - label: Dev Rust image
+            image: dev-rust
+            target: dev-rust
+            platforms: linux/amd64
+            smoke_platform: linux/amd64
+            smoke_profile: dev-rust
+          - label: Dev web image
+            image: dev-web
+            target: dev-web
+            platforms: linux/amd64
+            smoke_platform: linux/amd64
+            smoke_profile: dev-web
           - label: Dev desktop image
             image: tauri-dev-desktop
             target: dev-desktop
@@ -124,57 +133,7 @@ jobs:
           cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache,mode=max
 
       - name: Run smoke checks
-        shell: bash
-        run: |
-          case "${{ matrix.smoke_profile }}" in
-            ci-mobile)
-              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
-                command -v cargo rustup node pnpm cargo-tauri gh sdkmanager java
-                cargo --version
-                node --version
-                pnpm --version
-                gh --version
-                sdkmanager --version
-              '
-              ;;
-            dev-desktop)
-              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
-                [[ "$(id -u)" != "0" ]]
-                command -v cargo rustup node pnpm cargo-tauri gh
-                cargo --version
-                node --version
-                pnpm --version
-                gh --version
-                [[ "$CARGO_HOME" == "$HOME/.cargo" ]]
-                [[ "$RUSTUP_HOME" == "$HOME/.rustup" ]]
-                [[ "$PNPM_HOME" == "$HOME/.local/share/pnpm" ]]
-                touch "$CARGO_HOME/.smoke-write"
-                rm "$CARGO_HOME/.smoke-write"
-                touch "$PNPM_HOME/.smoke-write"
-                rm "$PNPM_HOME/.smoke-write"
-              '
-              ;;
-            dev-mobile)
-              docker run --rm "local-smoke:${{ matrix.target }}" bash -lc '
-                [[ "$(id -u)" != "0" ]]
-                command -v cargo rustup node pnpm cargo-tauri gh sdkmanager java
-                cargo --version
-                node --version
-                pnpm --version
-                gh --version
-                sdkmanager --version
-                [[ "$ANDROID_HOME" == "$HOME/Android/Sdk" ]]
-                touch "$CARGO_HOME/.smoke-write"
-                rm "$CARGO_HOME/.smoke-write"
-                mkdir -p "$ANDROID_HOME/.smoke"
-                rmdir "$ANDROID_HOME/.smoke"
-              '
-              ;;
-            *)
-              echo "Unknown smoke profile: ${{ matrix.smoke_profile }}" >&2
-              exit 1
-              ;;
-          esac
+        run: bash docker/ci/smoke-check.sh "${{ matrix.smoke_profile }}" "local-smoke:${{ matrix.target }}"
 
       - name: Build and push image
         id: build
@@ -205,13 +164,13 @@ jobs:
           echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"
           echo "${TAGS}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"
 
-  # CI desktop is the only multi-platform image (linux/amd64,linux/arm64). Building both
-  # platforms in one buildx invocation on an amd64 runner emulates arm64 via QEMU, which
-  # takes 2+ hours for this Dockerfile's from-source cargo installs. Building each platform
-  # natively (arm64 on GitHub's native arm64 runner, public-repo GA) and merging the
-  # resulting digests into one manifest avoids emulation entirely.
-  build-ci-desktop:
-    name: Build CI desktop image (${{ matrix.platform }})
+  # Multi-platform images (linux/amd64,linux/arm64): building both platforms in one
+  # buildx invocation on an amd64 runner emulates arm64 via QEMU, which takes 2+ hours
+  # for this Dockerfile's from-source cargo installs. Building each platform natively
+  # (arm64 on GitHub's native arm64 runner, public-repo GA) and merging the resulting
+  # digests into one manifest avoids emulation entirely.
+  build-multiarch:
+    name: Build ${{ matrix.label }} (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
     needs: cadence
     if: needs.cadence.outputs.run_publish == 'true'
@@ -222,9 +181,41 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: linux/amd64
+          - label: CI Rust image
+            image: ci-rust
+            target: ci-rust
+            smoke_profile: ci-rust
+            platform: linux/amd64
             runner: ubuntu-24.04
-          - platform: linux/arm64
+          - label: CI Rust image
+            image: ci-rust
+            target: ci-rust
+            smoke_profile: ci-rust
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - label: CI web image
+            image: ci-web
+            target: ci-web
+            smoke_profile: ci-web
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - label: CI web image
+            image: ci-web
+            target: ci-web
+            smoke_profile: ci-web
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - label: CI desktop image
+            image: tauri-ci-desktop
+            target: ci-desktop
+            smoke_profile: ci-desktop
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - label: CI desktop image
+            image: tauri-ci-desktop
+            target: ci-desktop
+            smoke_profile: ci-desktop
+            platform: linux/arm64
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
@@ -251,24 +242,17 @@ jobs:
         with:
           context: .
           file: docker/ci/Dockerfile
-          target: ci-desktop
+          target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
           load: true
-          tags: local-smoke:ci-desktop-${{ steps.platform_pair.outputs.pair }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:buildcache,mode=max
+          tags: local-smoke:${{ matrix.target }}-${{ steps.platform_pair.outputs.pair }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache,mode=max
 
       - name: Run smoke checks
         env:
           PLATFORM_PAIR: ${{ steps.platform_pair.outputs.pair }}
-        run: |
-          docker run --rm "local-smoke:ci-desktop-${PLATFORM_PAIR}" bash -lc '
-            command -v cargo rustup node pnpm cargo-tauri gh
-            cargo --version
-            node --version
-            pnpm --version
-            gh --version
-          '
+        run: bash docker/ci/smoke-check.sh "${{ matrix.smoke_profile }}" "local-smoke:${{ matrix.target }}-${PLATFORM_PAIR}"
 
       - name: Build and push by digest
         id: build
@@ -276,11 +260,11 @@ jobs:
         with:
           context: .
           file: docker/ci/Dockerfile
-          target: ci-desktop
+          target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:buildcache,mode=max
+          outputs: type=image,name=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:buildcache,mode=max
 
       - name: Export digest
         env:
@@ -292,27 +276,40 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: digests-ci-desktop-${{ steps.platform_pair.outputs.pair }}
+          name: digests-${{ matrix.target }}-${{ steps.platform_pair.outputs.pair }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
 
-  merge-ci-desktop:
-    name: Publish CI desktop image (merged manifest)
+  merge-multiarch:
+    name: Publish ${{ matrix.label }} (merged manifest)
     runs-on: ubuntu-24.04
-    needs: build-ci-desktop
+    needs: build-multiarch
     # No checkout in this job (only artifact download + buildx/GHCR), so
     # `contents: read` is deliberately omitted here. If a future step needs
     # repo content, add it back explicitly.
     permissions:
       actions: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: CI Rust image
+            image: ci-rust
+            target: ci-rust
+          - label: CI web image
+            image: ci-web
+            target: ci-web
+          - label: CI desktop image
+            image: tauri-ci-desktop
+            target: ci-desktop
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4.3.0
         with:
           path: /tmp/digests
-          pattern: digests-ci-desktop-*
+          pattern: digests-${{ matrix.target }}-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
@@ -329,7 +326,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5.10.0
         with:
-          images: ${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}
+          images: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=staging,enable=${{ github.ref != 'refs/heads/main' }}
@@ -338,23 +335,26 @@ jobs:
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
+        env:
+          IMAGE_REF: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}@sha256:%s ' *)
+            $(printf "${IMAGE_REF}@sha256:%s " *)
 
       - name: Inspect image
         env:
           VERSION: ${{ steps.meta.outputs.version }}
-        run: docker buildx imagetools inspect "${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}:${VERSION}"
+          IMAGE_REF: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+        run: docker buildx imagetools inspect "${IMAGE_REF}:${VERSION}"
 
       - name: Write publish summary
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          echo "## CI desktop image published" >> "${GITHUB_STEP_SUMMARY}"
+          echo "## ${{ matrix.label }} published" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ env.CI_DESKTOP_IMAGE }}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Platforms: \`linux/amd64,linux/arm64\` (built natively per-arch, merged)" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"

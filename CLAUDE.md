@@ -29,20 +29,22 @@ There is no app build/lint/test suite (no package.json, no source code to compil
 
 ### Shared container images (`docker/ci/Dockerfile`)
 
-A single multi-stage Dockerfile produces four published image targets, built from two parallel stage chains:
+A single multi-stage Dockerfile produces eight published image targets, built from two parallel tier chains where each tier adds exactly one concern:
 
-- `ci-base` → `ci-toolchain` → **`ci-desktop`** / **`ci-mobile`**: root-friendly images for GitHub Actions and other automated pipelines. Tool paths live under `/usr/local` (`CARGO_HOME`, `RUSTUP_HOME`); mobile adds Android SDK/NDK under `/opt/android-sdk`.
-- `dev-base` → `dev-toolchain` → **`dev-desktop`** / **`dev-mobile`**: non-root devcontainer images (runs as `vscode` user) for interactive local development. Tool paths live under `/home/vscode` instead; mobile adds Android SDK/NDK under `$HOME/Android/Sdk`.
+- `ci-base` (unpublished, universal CLI only) → **`ci-rust`** (pinned Rust + clippy/rustfmt/cargo-nextest) → **`ci-desktop`** (+ Node/pnpm/Bun + GTK/webkit GUI stack + GStreamer/xvfb/emoji fonts + tauri-cli) → **`ci-mobile`** (+ Java + Android SDK/NDK); plus **`ci-web`** (Node/pnpm/Bun, no Rust) as a sibling off `ci-base`. Root-friendly images for automated pipelines; tool paths under `/usr/local`, Android under `/opt/android-sdk`, Bun under `/usr/local/bun`.
+- `dev-base` (unpublished, universal CLI + vim/ripgrep/fd/jq) → **`dev-rust`** → **`dev-desktop`** (adds X11 inspection tools too) → **`dev-mobile`**; plus **`dev-web`** off `dev-base`. Non-root devcontainer images (run as `vscode`); tool paths under `/home/vscode`, Android under `$HOME/Android/Sdk`, Bun under `$HOME/.bun`.
 
-Both families install the GitHub CLI (`gh`) from GitHub's own apt repo (not the distro package) and pin Node/pnpm/Rust versions via build args at the top of the file. `cargo-tauri` is installed from a Tauri fork branch (`feat/truly-portable-appimage`) to get portable AppImage behaviour, paired with `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true`. Images publish to `ghcr.io/liminal-hq/tauri-{ci,dev}-{desktop,mobile}`.
+The GUI/Tauri system libraries live only in the desktop tiers — never in a base or lean tier. The Node+pnpm+Bun install block deliberately appears in both the web and Tauri-desktop tiers of each family (single inheritance can't give the desktop tier two parents); all sites consume the same `ARG` pins so versions can't drift.
+
+Both families install the GitHub CLI (`gh`) from GitHub's own apt repo (not the distro package) and pin Node/pnpm/Bun/Rust versions via build args at the top of the file. `cargo-tauri` is installed from a Tauri fork branch (`feat/truly-portable-appimage`) to get portable AppImage behaviour, paired with `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true`. Images publish to `ghcr.io/liminal-hq/{ci,dev}-{rust,web}` and `ghcr.io/liminal-hq/tauri-{ci,dev}-{desktop,mobile}`. Smoke checks live in `docker/ci/smoke-check.sh` (per-tier profiles, including leanness assertions on `ci-rust`/`ci-web`).
 
 Keep version pins aligned across the CI and dev chains, and keep target names using the `ci-`/`dev-` prefixes — see `docs/reference/shared-image-layout.md` for the full layout contract and `docs/reference/shared-image-implementation-spec.md` for the implementation spec.
 
 ### Image publish workflow (`.github/workflows/shared-tauri-ci-images.yml`)
 
-Builds and pushes the four images above on push to `main` (when `docker/ci/**` or the workflow itself changes), on `workflow_dispatch`, and on a weekly `schedule` gated to a two-week publish cadence (an ISO week-number parity check in the `cadence` job). Each image build does a local single-platform "smoke" build/run first, then the real (possibly multi-platform) build/push.
+Builds and pushes the eight images above on push to `main` (when `docker/ci/**` or the workflow itself changes), on `workflow_dispatch`, and on a weekly `schedule` gated to a two-week publish cadence (an ISO week-number parity check in the `cadence` job). Each image build does a local single-platform "smoke" build/run first (via `docker/ci/smoke-check.sh`), then the real build/push.
 
-`ci-desktop` is the only multi-platform image (`linux/amd64` + `linux/arm64`) and is handled specially to avoid QEMU emulation: `build-ci-desktop` builds each platform natively on its own runner (including GitHub's native `ubuntu-24.04-arm` runner) and pushes by digest, then `merge-ci-desktop` combines the digests into one multi-arch manifest via `docker buildx imagetools create`. The other three images build directly in a single matrixed job (`publish-images`).
+`ci-rust`, `ci-web`, and `ci-desktop` are multi-platform (`linux/amd64` + `linux/arm64`) and are handled specially to avoid QEMU emulation: `build-multiarch` builds each image×platform combination natively on its own runner (including GitHub's native `ubuntu-24.04-arm` runner) and pushes by digest, then `merge-multiarch` combines each image's digests into one multi-arch manifest via `docker buildx imagetools create`. The five single-platform images build directly in one matrixed job (`publish-images`).
 
 ### Reusable AppImage packaging workflow (`.github/workflows/package-arch-appimage.yml`)
 
