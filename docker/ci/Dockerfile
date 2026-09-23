@@ -1,3 +1,8 @@
+# Shared CI/dev image definitions for the Liminal HQ Tauri toolchain.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 ARG UBUNTU_VERSION=24.04
 ARG DEVCONTAINER_BASE_IMAGE=mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 ARG DEBIAN_FRONTEND=noninteractive

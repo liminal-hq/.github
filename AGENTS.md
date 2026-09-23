@@ -137,6 +137,37 @@ Keep labels accurate as the PR scope changes.
 
 ## Licence and Copyright
 
-- **Requirement:** New source-like files should include a short header when that is already the pattern for the relevant file type in the repo.
-- **Applies to:** authored source files and scripts where the repository already follows that convention.
-- **Do not add headers to:** markdown docs, workflow YAML files, JSON files, lockfiles, generated files, or other config-only files unless the repository later adopts a broader rule.
+This repository is dual-licensed under Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`).
+
+**REQUIREMENT:** All source-like files (shell scripts, the shared Dockerfile, GitHub Actions workflow YAML) MUST include a licence and copyright header as the first content in the file.
+
+**Header format:**
+
+For shell scripts (`.sh`):
+
+```sh
+# Brief one-line summary of what this file does.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+For the shared Dockerfile:
+
+```dockerfile
+# Brief one-line summary of what this file does.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+For GitHub Actions workflow files (`.yml`, `.yaml`):
+
+```yaml
+# Brief one-line summary of what this workflow does.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+- **Do not add headers to:** markdown docs, JSON files (including `.markdownlint.jsonc`), `.hadolint.yaml`, lockfiles, or other generated/config-only files.
