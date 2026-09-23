@@ -22,11 +22,11 @@ ignored:
   # would be less readable for an info-level, non-blocking hint.
   - DL3066
   # Already fixed at the source, not actually unaddressed: `ci-base` and
-  # `dev-base` each set `SHELL ["/bin/bash", "-o", "pipefail", "-c"]`, which
-  # Docker does carry into every descendant stage (`FROM <earlier-stage>`
-  # inherits the image's shell config -- verified directly against a real
-  # build, not assumed). hadolint's own check is purely per-stage text
-  # analysis and has no model of that cross-stage inheritance, so it keeps
-  # flagging every derived stage's piped RUN regardless. Ignored here
-  # because the underlying gap is closed, not because it's unaddressed.
+  # `dev-base` each set `SHELL ["/bin/bash", "-o", "pipefail", "-c"]`, and
+  # Docker carries that into every descendant stage (`FROM <earlier-stage>`
+  # inherits the image's shell config). hadolint's own check is purely
+  # per-stage text analysis and has no model of that cross-stage
+  # inheritance, so it keeps flagging every derived stage's piped RUN
+  # regardless. Ignored here because the underlying gap is closed, not
+  # because it's unaddressed.
   - DL4006
