@@ -73,8 +73,8 @@ jobs:
         run: |
           set -eu
           # -S --needed, not -Syu: the setup action already did a full sync+upgrade.
-          # Running -Syu again immediately after was observed knocking patchelf back
-          # out during the initial emoji-nook pilot, breaking quick-sharun.
+          # Running -Syu again immediately after knocks patchelf back out of the
+          # environment, breaking quick-sharun.
           # shellcheck disable=SC2086 # intentionally word-split: space-separated package list
           pacman -S --noconfirm --needed ${EXTRA_PACMAN_PACKAGES}
           get-debloated-pkgs --add-common --prefer-nano

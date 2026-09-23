@@ -52,7 +52,7 @@ A `workflow_call`-only reusable workflow, called via `uses:` from a consumer rep
 
 Non-obvious operational gotchas baked into this workflow (don't undo them without re-reading why):
 
-- Never re-run `pacman -Syu` after the `anylinux-setup-action` setup step — it's already been done once, and a second run has been observed knocking `patchelf` back out.
+- Never re-run `pacman -Syu` after the `anylinux-setup-action` setup step — it's already been done once, and a second run knocks `patchelf` back out.
 - `quick-sharun` needs `OUTPATH` set explicitly or it writes into the cwd instead of `dist/`.
 - Only one app icon is copied into the AppDir (largest, via sorted `find`), not a glob — Tauri's `.deb` ships multiple resolutions under the same basename, which collides with `cp`'s overwrite guard.
 
