@@ -3,6 +3,10 @@
 # Usage: smoke-check.sh <profile> <image-ref>
 # Profiles mirror the published image tiers; each check runs inside the image
 # and enforces the tier's tool availability, environment, and leanness contract.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 set -euo pipefail
 
 profile="${1:?usage: smoke-check.sh <profile> <image-ref>}"

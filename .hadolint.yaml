@@ -1,7 +1,32 @@
-# Only fail CI on hadolint's `error` severity for now. `docker/ci/Dockerfile`
-# carries a backlog of `warning`-level findings (DL3008 unpinned apt package
-# versions, DL4006 missing `set -o pipefail`, DL3003 WORKDIR-vs-cd, DL4001
-# wget+curl both present) that haven't been triaged yet. Findings are still
-# reported in CI output; this just keeps the check green on the existing
-# baseline while still catching newly introduced `error`-level problems.
+# Only fail CI on hadolint's `error` severity. `docker/ci/Dockerfile` also
+# explicitly ignores a small set of `warning`/`info`-level rules that don't
+# fit this repo's tradeoffs -- see below for why each is ignored rather than
+# fixed. Anything not listed here and not at `error` severity still just
+# gets reported, not blocked, until it's triaged.
 failure-threshold: error
+
+ignored:
+  # Deliberately unpinned: exact apt package version pins would make builds
+  # *more* fragile here, not less -- Ubuntu's archive doesn't reliably keep
+  # old point-release binaries around, so a stale pin can break a rebuild
+  # outright. Rely on the Ubuntu base image tag + weekly rebuild cadence for
+  # reproducibility instead.
+  - DL3008
+  # `cd` inside a single RUN's `&&` chain is deliberate in the Android SDK
+  # install blocks -- switching to WORKDIR would change the working
+  # directory for every later instruction in the rest of the stage, which
+  # is worse.
+  - DL3003
+  # `USER vscode` is the standard Microsoft devcontainers convention
+  # (guaranteed UID 1000 in the devcontainer base image); a numeric UID
+  # would be less readable for an info-level, non-blocking hint.
+  - DL3066
+  # Already fixed at the source, not actually unaddressed: `ci-base` and
+  # `dev-base` each set `SHELL ["/bin/bash", "-o", "pipefail", "-c"]`, and
+  # Docker carries that into every descendant stage (`FROM <earlier-stage>`
+  # inherits the image's shell config). hadolint's own check is purely
+  # per-stage text analysis and has no model of that cross-stage
+  # inheritance, so it keeps flagging every derived stage's piped RUN
+  # regardless. Ignored here because the underlying gap is closed, not
+  # because it's unaddressed.
+  - DL4006

@@ -1,3 +1,8 @@
+# Shared CI/dev image definitions for the Liminal HQ Tauri toolchain.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 ARG UBUNTU_VERSION=24.04
 ARG DEVCONTAINER_BASE_IMAGE=mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 ARG DEBIAN_FRONTEND=noninteractive
@@ -15,6 +20,12 @@ ARG ANDROID_NDK=28.2.13676358
 # so lean tiers (ci-rust, ci-web) never inherit them.
 FROM ubuntu:${UBUNTU_VERSION} AS ci-base
 
+# Applies to this stage and every descendant (ci-rust, ci-web, ci-desktop,
+# ci-mobile): without pipefail, a failed download on the left of a `curl |
+# bash`-style install can silently succeed since the pipe's exit code comes
+# from the right-hand command.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ARG DEBIAN_FRONTEND
 
 # Install GitHub CLI from the official GitHub package repository so shared images
@@ -24,7 +35,7 @@ ARG DEBIAN_FRONTEND
 # course -- this isn't just an interactive convenience.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl wget \
-    && mkdir -p -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
+    && install -d -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
     && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
       https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
@@ -155,6 +166,12 @@ RUN yes | sdkmanager --licenses \
 # GUI/Tauri system libraries intentionally live in the dev desktop tier, not here.
 FROM ${DEVCONTAINER_BASE_IMAGE} AS dev-base
 
+# Applies to this stage and every descendant (dev-rust, dev-web, dev-desktop,
+# dev-mobile): without pipefail, a failed download on the left of a `curl |
+# bash`-style install can silently succeed since the pipe's exit code comes
+# from the right-hand command.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ARG DEBIAN_FRONTEND
 
 ENV TZ=America/Toronto \
@@ -170,7 +187,7 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime \
 # get the supported upstream release channel for interactive GitHub workflows.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl wget \
-    && mkdir -p -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
+    && install -d -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
     && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
       https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
