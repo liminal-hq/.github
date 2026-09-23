@@ -19,6 +19,9 @@ ARG DEBIAN_FRONTEND
 
 # Install GitHub CLI from the official GitHub package repository so shared images
 # track the supported upstream release channel instead of the distro package lag.
+# jq lives here (not just dev-base) because release/CI scripts across consumer
+# repos parse JSON manifests (package.json, tauri.conf.json) as a matter of
+# course -- this isn't just an interactive convenience.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl wget \
     && mkdir -p -m 755 /etc/apt/keyrings /etc/apt/sources.list.d \
@@ -28,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
       > /etc/apt/sources.list.d/github-cli.list \
     && apt-get update && apt-get install -y --no-install-recommends \
-    git gh file build-essential pkg-config zip unzip \
+    git gh file build-essential pkg-config zip unzip jq \
     && rm -rf /var/lib/apt/lists/*
 
 # CI Rust tier: pinned Rust toolchain and Rust QA tooling on the universal base.

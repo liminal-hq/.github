@@ -24,7 +24,7 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 
 ```text
 ci-base (unpublished)          universal CLI: certs, curl, wget, git, gh, file,
-│                              build-essential, pkg-config, zip, unzip
+│                              build-essential, pkg-config, zip, unzip, jq
 ├── ci-rust                    + rustup (pinned) + clippy + rustfmt + cargo-nextest
 │   └── ci-desktop             + Node/pnpm/Bun + GTK/webkit stack + GStreamer/xvfb/
 │       │                        emoji fonts + tauri-cli
@@ -113,7 +113,7 @@ Both JS runtimes (pnpm via Node, plus Bun) ship in every image tier that carries
 
 Every published image is smoke-validated by `docker/ci/smoke-check.sh` (invoked by the publish workflow before push) for:
 
-- tier tool availability (e.g. `cargo`/`rustup`/`cargo-nextest` on Rust tiers, `node`/`pnpm`/`bun` on JS tiers, `cargo-tauri` on Tauri tiers, `gh` everywhere)
+- tier tool availability (e.g. `cargo`/`rustup`/`cargo-nextest` on Rust tiers, `node`/`pnpm`/`bun` on JS tiers, `cargo-tauri` on Tauri tiers, `gh`/`jq` everywhere)
 - tier leanness on the lean CI tiers (`ci-rust` must not contain Node or Bun; `ci-web` must not contain cargo)
 - Android tooling on mobile images
 - writable user-home paths on dev images
