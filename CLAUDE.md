@@ -52,7 +52,7 @@ A `workflow_call`-only reusable workflow, called via `uses:` from a consumer rep
 
 Non-obvious operational gotchas baked into this workflow (don't undo them without re-reading why):
 
-- Never re-run `pacman -Syu` after the `anylinux-setup-action` setup step — it's already been done once, and a second run has been observed knocking `patchelf` back out.
+- Never re-run `pacman -Syu` after the `anylinux-setup-action` setup step — it's already been done once, and a second run knocks `patchelf` back out.
 - `quick-sharun` needs `OUTPATH` set explicitly or it writes into the cwd instead of `dist/`.
 - Only one app icon is copied into the AppDir (largest, via sorted `find`), not a glob — Tauri's `.deb` ships multiple resolutions under the same basename, which collides with `cp`'s overwrite guard.
 
@@ -72,6 +72,7 @@ Non-obvious operational gotchas baked into this workflow (don't undo them withou
 ## Conventions (see `AGENTS.md` for full detail)
 
 - **Spelling:** Canadian English in comments, docs, commits, and PRs (unless external tooling/API/identifier spelling dictates otherwise).
+- **Authoring voice:** write comments, docs, and PR descriptions as the author of the artifact, not as a record of the debugging/review process that produced it — no "this PR"/reviewer references inside comments or prose. Commit messages and a PR's `## Test plan` section are the legitimate exceptions for process/why narration.
 - **Commit messages:** Conventional Commits (`feat:`, `fix:`, `docs:`, `ci:`, `build:`, etc). Write multi-line/markdown-heavy bodies to a file and commit with `git commit -F <file>` rather than piping backticks/`$()` through `-m`; verify with `git log -1 --pretty=fuller` afterward.
 - **PR titles:** human-readable outcome summaries, capitalized, *no* Conventional Commit prefix.
 - **PR descriptions:** `## Summary` (flat bullets, bold lead-ins) + optional `###` subsections (`User-facing changes`, `Maintainer-facing changes`, `Packaging`, `Workflow and infrastructure`, `Documentation`, `Known limitations`) + `## Test plan` (checklist bullets, concrete commands, explicit gaps if verification is incomplete). Every PR needs at least one primary label (`enhancement`/`bug`/`documentation`/`testing`/`ci`/`build`/`chore`).

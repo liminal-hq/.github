@@ -55,7 +55,7 @@ On the caller's existing build job: drop `appimage` from the `tauri build --bund
 
 ## Operational notes
 
-- **Don't re-run a full `pacman -Syu` after `anylinux-setup-action`.** The setup action already does one. Running it again immediately after was observed knocking `patchelf` out of the environment during development, breaking `quick-sharun` with `Missing dependency 'patchelf'!`. Use `pacman -S --noconfirm --needed` for anything extra instead.
+- **Don't re-run a full `pacman -Syu` after `anylinux-setup-action`.** The setup action already does one. Running it again immediately after knocks `patchelf` out of the environment, breaking `quick-sharun` with `Missing dependency 'patchelf'!`. Use `pacman -S --noconfirm --needed` for anything extra instead.
 - **Set `OUTPATH`.** `quick-sharun` writes the AppImage into the current working directory if `OUTPATH` isn't set, not a `dist/` subdirectory — this workflow sets `OUTPATH=./dist` explicitly.
 - **Pick one icon, don't glob.** Tauri's `.deb` bundler ships multiple icon resolutions under the same basename. Copying them all into `AppDir/` in one `cp` invocation hits `cp`'s just-created-file overwrite guard. This workflow picks the largest via a version-sorted `find` instead.
 - **`libayatana-appindicator3`'s Arch package is `libayatana-appindicator`**, in the official `extra` repo — not `libappindicator-gtk3`, which doesn't exist on Arch under that name at all (cloning it from the AUR silently produces an empty repository rather than a clear error).

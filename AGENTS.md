@@ -19,6 +19,15 @@ This repository is the shared home for Liminal HQ GitHub infrastructure, includi
 - `assets/`: authored visual assets used by repository documentation
 - `profile/`: organisation profile content surfaced by GitHub
 
+## Authoring Voice
+
+**Requirement:** Ship the result, not how the conversation arrived at it. Write every outward-facing line — Dockerfile/workflow/script comments, docs, PR descriptions — as the author of the artifact, for the reader who will encounter it later, not as a record of the debugging or review process that produced it.
+
+- Don't reference "this PR", "the review", a reviewer's name, or a commit SHA inside comments or PR prose. State the fact or the reasoning directly, as if it had always been true.
+- When a comment gets edited more than once across a change, rewrite it as one clean explanation — don't leave layered fragments from each edit stacked on top of each other.
+- Commit messages are the exception: they're a legitimate place to record _why_ a change happened, including review feedback or debugging context — that's what git history is for. The `## Test plan` section of a PR description is a similar exception: it exists specifically to record verification steps, so process language belongs there.
+- Two file categories are exempt for the same reason: self-declared historical/decision records (`docs/proposals/archived/`) and periodically-updated status logs (`docs/tracking/`). Recording the investigation, or recording what changed and when, is their entire stated purpose — the same rationale as the commit-message exception, just written down instead of living in git history.
+
 ## Commit Messages
 
 **Requirement:** Use Conventional Commits format (for example: `feat: ...`, `fix: ...`, `docs: ...`, `test: ...`, `ci: ...`, `build: ...`).
