@@ -43,7 +43,7 @@ The shared Dockerfile builds two parallel tier chains. Each tier adds exactly on
 #### CI stages
 
 - `ci-base` (unpublished)
-  - Ubuntu base with universal CLI tooling only: certificates, curl/wget, git, gh, file, build-essential, pkg-config, zip/unzip
+  - Ubuntu base with universal CLI tooling only: certificates, curl/wget, git, gh, file, build-essential, pkg-config, zip/unzip, jq
 - `ci-rust`
   - adds the pinned Rust toolchain, clippy, rustfmt, and `cargo-nextest`
   - root-friendly tool paths under `/usr/local`

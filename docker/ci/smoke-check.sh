@@ -15,43 +15,47 @@ run_in_image() {
 case "${profile}" in
   ci-rust)
     run_in_image '
-      command -v cargo rustup cargo-nextest gh
+      command -v cargo rustup cargo-nextest gh jq
       cargo --version
       rustup --version
       cargo nextest --version
       gh --version
+      jq --version
       ! command -v node
       ! command -v bun
     '
     ;;
   ci-web)
     run_in_image '
-      command -v node pnpm bun gh
+      command -v node pnpm bun gh jq
       node --version
       pnpm --version
       bun --version
       gh --version
+      jq --version
       ! command -v cargo
     '
     ;;
   ci-desktop)
     run_in_image '
-      command -v cargo rustup node pnpm bun cargo-tauri gh
+      command -v cargo rustup node pnpm bun cargo-tauri gh jq
       cargo --version
       node --version
       pnpm --version
       bun --version
       gh --version
+      jq --version
     '
     ;;
   ci-mobile)
     run_in_image '
-      command -v cargo rustup node pnpm bun cargo-tauri gh sdkmanager java
+      command -v cargo rustup node pnpm bun cargo-tauri gh jq sdkmanager java
       cargo --version
       node --version
       pnpm --version
       bun --version
       gh --version
+      jq --version
       sdkmanager --version
     '
     ;;
