@@ -127,6 +127,34 @@ case "${profile}" in
       rmdir "$ANDROID_HOME/.smoke"
     '
     ;;
+  dev-windows)
+    # Deliberately no `cargo xwin build` here: it would download the Microsoft
+    # SDK, which the image must not contain.
+    run_in_image '
+      [[ "$(id -u)" != "0" ]]
+      for tool in clang-cl llvm-lib llvm-ar llvm-rc lld-link cargo-xwin makensis cargo rustup node bun; do
+        command -v "$tool"
+      done
+      cargo --version
+      cargo xwin --version
+      clang-cl --version
+      lld-link --version
+      llvm-lib /? > /dev/null
+      llvm-ar --version
+      llvm-rc /? > /dev/null
+      makensis -VERSION
+      installed="$(rustup target list --installed)"
+      grep -qx x86_64-pc-windows-msvc <<< "$installed"
+      grep -qx aarch64-pc-windows-msvc <<< "$installed"
+      [[ "$CARGO_HOME" == "$HOME/.cargo" ]]
+      [[ "$XWIN_CACHE_DIR" == "$HOME/.cache/cargo-xwin" ]]
+      touch "$CARGO_HOME/.smoke-write"
+      rm "$CARGO_HOME/.smoke-write"
+      touch "$XWIN_CACHE_DIR/.smoke-write"
+      rm "$XWIN_CACHE_DIR/.smoke-write"
+      [[ -z "$(ls -A "$XWIN_CACHE_DIR")" ]]
+    '
+    ;;
   *)
     echo "Unknown smoke profile: ${profile}" >&2
     exit 1

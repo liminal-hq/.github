@@ -18,6 +18,7 @@ There is no app build/lint/test suite (no package.json, no source code to compil
   docker build --target ci-mobile -f docker/ci/Dockerfile .
   docker build --target dev-desktop -f docker/ci/Dockerfile .
   docker build --target dev-mobile -f docker/ci/Dockerfile .
+  docker build --target dev-windows -f docker/ci/Dockerfile .
   ```
 
   Call out explicitly which targets were built and which were not (mobile/Android targets are slow due to SDK/NDK downloads).
@@ -29,10 +30,10 @@ There is no app build/lint/test suite (no package.json, no source code to compil
 
 ### Shared container images (`docker/ci/Dockerfile`)
 
-A single multi-stage Dockerfile produces eight published image targets, built from two parallel tier chains where each tier adds exactly one concern:
+A single multi-stage Dockerfile produces nine published image targets, built from two parallel tier chains where each tier adds exactly one concern:
 
 - `ci-base` (unpublished, universal CLI only) → **`ci-rust`** (pinned Rust + clippy/rustfmt/cargo-nextest) → **`ci-desktop`** (+ Node/pnpm/Bun + GTK/webkit GUI stack + GStreamer/xvfb/emoji fonts + tauri-cli) → **`ci-mobile`** (+ Java + Android SDK/NDK); plus **`ci-web`** (Node/pnpm/Bun, no Rust) as a sibling off `ci-base`. Root-friendly images for automated pipelines; tool paths under `/usr/local`, Android under `/opt/android-sdk`, Bun under `/usr/local/bun`.
-- `dev-base` (unpublished, universal CLI + vim/ripgrep/fd/jq) → **`dev-rust`** → **`dev-desktop`** (adds X11 inspection tools too) → **`dev-mobile`**; plus **`dev-web`** off `dev-base`. Non-root devcontainer images (run as `vscode`); tool paths under `/home/vscode`, Android under `$HOME/Android/Sdk`, Bun under `$HOME/.bun`.
+- `dev-base` (unpublished, universal CLI + vim/ripgrep/fd/jq) → **`dev-rust`** → **`dev-desktop`** (adds X11 inspection tools too) → **`dev-mobile`** and **`dev-windows`** (+ clang/lld/llvm, NSIS, `cargo-xwin` and the Windows MSVC targets for Linux/WSL2 cross builds; no Microsoft SDK baked in); plus **`dev-web`** off `dev-base`. Non-root devcontainer images (run as `vscode`); tool paths under `/home/vscode`, Android under `$HOME/Android/Sdk`, Bun under `$HOME/.bun`.
 
 The GUI/Tauri system libraries live only in the desktop tiers — never in a base or lean tier. The Node+pnpm+Bun install block deliberately appears in both the web and Tauri-desktop tiers of each family (single inheritance can't give the desktop tier two parents); all sites consume the same `ARG` pins so versions can't drift.
 
@@ -42,7 +43,7 @@ Keep version pins aligned across the CI and dev chains, and keep target names us
 
 ### Image publish workflow (`.github/workflows/shared-tauri-ci-images.yml`)
 
-Builds and pushes the eight images above on push to `main` (when `docker/ci/**` or the workflow itself changes), on `workflow_dispatch`, and on a weekly `schedule` gated to a two-week publish cadence (an ISO week-number parity check in the `cadence` job). Each image build does a local single-platform "smoke" build/run first (via `docker/ci/smoke-check.sh`), then the real build/push.
+Builds and pushes the nine images above on push to `main` (when `docker/ci/**` or the workflow itself changes), on `workflow_dispatch`, and on a weekly `schedule` gated to a two-week publish cadence (an ISO week-number parity check in the `cadence` job). Each image build does a local single-platform "smoke" build/run first (via `docker/ci/smoke-check.sh`), then the real build/push.
 
 `ci-rust`, `ci-web`, and `ci-desktop` are multi-platform (`linux/amd64` + `linux/arm64`) and are handled specially to avoid QEMU emulation: `build-multiarch` builds each image×platform combination natively on its own runner (including GitHub's native `ubuntu-24.04-arm` runner) and pushes by digest, then `merge-multiarch` combines each image's digests into one multi-arch manifest via `docker buildx imagetools create`. The five single-platform images build directly in one matrixed job (`publish-images`).
 

@@ -4,7 +4,7 @@
 
 1. Trigger `.github/workflows/shared-tauri-ci-images.yml` manually or via push/schedule.
 2. Confirm all jobs complete for the intended image set:
-   - `publish-images` matrix: CI mobile, dev Rust, dev web, dev desktop, dev mobile
+   - `publish-images` matrix: CI mobile, dev Rust, dev web, dev desktop, dev mobile, dev Windows
    - `build-multiarch` + `merge-multiarch`: CI Rust, CI web, CI desktop (per-platform native builds merged into one manifest)
 3. Record published digest and tags from the step summaries.
 4. First publish of a NEW image only: GHCR creates new packages with private visibility. Set the package to public (org settings → Packages → the new package → Change visibility) and connect it to this repository, or cross-org consumers (e.g. `ScottMorris/*` repos) cannot pull it and `GITHUB_TOKEN`-based pulls outside the org will fail.
@@ -29,6 +29,8 @@ Published images:
    Current platforms: `linux/amd64`
 8. `ghcr.io/liminal-hq/tauri-dev-mobile`
    Current platforms: `linux/amd64`
+9. `ghcr.io/liminal-hq/tauri-dev-windows`
+   Current platforms: `linux/amd64`
 
 Downstream consumers should not assume ARM support exists for the mobile or dev image families unless that contract is expanded in a later change.
 
@@ -42,10 +44,11 @@ Docker targets:
 6. `dev-web`
 7. `dev-desktop`
 8. `dev-mobile`
+9. `dev-windows`
 
 Usage guidance:
 
-1. Pick the leanest tier that covers the repo's toolchain: `*-rust` for pure Rust, `*-web` for JS/TS only, `tauri-*-desktop` for Tauri desktop, `tauri-*-mobile` for Android.
+1. Pick the leanest tier that covers the repo's toolchain: `*-rust` for pure Rust, `*-web` for JS/TS only, `tauri-*-desktop` for Tauri desktop, `tauri-*-mobile` for Android, `tauri-dev-windows` for cross-compiling Windows builds from Linux or WSL2.
 2. Use CI images (`ci-rust`, `ci-web`, `tauri-ci-*`) for CI and other automated pipeline contexts.
 3. Use dev images (`dev-rust`, `dev-web`, `tauri-dev-*`) for devcontainers and interactive local development or toolbox use.
 4. Expect CI images to remain root-friendly and minimal.
@@ -84,14 +87,17 @@ The publish workflow runs `docker/ci/smoke-check.sh <profile> <image>` against e
    - JS tiers: `node`, `pnpm`, `bun`
    - Tauri tiers: `cargo-tauri`
    - mobile tiers: `sdkmanager`, `java`
+   - `dev-windows`: `clang-cl`, `llvm-lib`, `llvm-ar`, `llvm-rc`, `lld-link`, `cargo-xwin`, `makensis`, and both `*-pc-windows-msvc` Rust targets
    - all tiers: `gh`
-2. Leanness on lean CI tiers:
+2. Leanness:
    - `ci-rust` must not contain `node` or `bun`
    - `ci-web` must not contain `cargo`
+   - `dev-windows` must ship an empty xwin cache directory: the Microsoft CRT and Windows SDK are downloaded by the consumer on first use, never baked into the published image
 3. Environment values:
    - `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true` (Tauri tiers)
    - `JAVA_HOME` (mobile images)
    - `ANDROID_HOME` (mobile images)
+   - `XWIN_CACHE_DIR` (`dev-windows`)
    - user-home tool paths for dev images (`CARGO_HOME`, `RUSTUP_HOME`, `PNPM_HOME`, `BUN_INSTALL` as applicable)
 4. Writable-path checks for dev images:
    - `CARGO_HOME` (Rust tiers)
