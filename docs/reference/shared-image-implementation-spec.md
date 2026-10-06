@@ -23,6 +23,7 @@ Published image set:
 | `ghcr.io/liminal-hq/dev-web` | `dev-web` | JS/TS devcontainers and toolbox use |
 | `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | Desktop devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-mobile` | `dev-mobile` | Android/mobile devcontainers |
+| `ghcr.io/liminal-hq/tauri-dev-windows` | `dev-windows` | Cross-compiling Windows builds from Linux or WSL2 |
 
 The platform contract is intentionally asymmetric: the `ci-rust`, `ci-web`, and `tauri-ci-desktop` images publish both `linux/amd64` and `linux/arm64`, while the mobile and dev image families currently publish `linux/amd64` only.
 
@@ -70,6 +71,11 @@ The shared Dockerfile builds two parallel tier chains. Each tier adds exactly on
 - `dev-mobile`
   - builds on `dev-desktop`
   - adds Java and Android SDK/NDK under the user home
+- `dev-windows`
+  - builds on `dev-desktop`
+  - adds clang, lld, llvm and NSIS, `clang-cl`/`llvm-lib`/`llvm-ar`/`llvm-rc`/`lld-link` symlinks in `/usr/local/bin` resolved from the installed LLVM directory, `cargo-xwin` (pinned by `CARGO_XWIN_VERSION`), and the `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc` Rust targets on the image's default toolchain
+  - ships an empty `XWIN_CACHE_DIR` (`/home/vscode/.cache/cargo-xwin`) owned by the devcontainer user: the Microsoft CRT and Windows SDK are never baked in, because `cargo-xwin` downloads them on first use under Microsoft's licence terms
+  - is for Linux hosts and WSL2; it does not run on Windows runners
 
 ### JS runtime duplication
 
@@ -102,6 +108,7 @@ Expected paths:
 - Rust tiers: `RUSTUP_HOME=$HOME/.rustup`, `CARGO_HOME=$HOME/.cargo`
 - JS tiers: `PNPM_HOME=$HOME/.local/share/pnpm`, `BUN_INSTALL=$HOME/.bun`
 - mobile images: `ANDROID_HOME=$HOME/Android/Sdk`, `ANDROID_SDK_ROOT=$HOME/Android/Sdk`
+- `dev-windows`: `XWIN_CACHE_DIR=$HOME/.cache/cargo-xwin`
 
 Dev images should pre-create writable user-owned directories for the tool paths their tier owns (`.cargo`/`.rustup` on Rust tiers, `.local/share/pnpm` on JS tiers, `Android/Sdk` where applicable).
 
@@ -117,6 +124,7 @@ The image tiers stay aligned on:
 - Android command-line tools version
 - Android platform, build-tools, and NDK versions
 - Tauri CLI source and branch
+- `cargo-xwin` version (`dev-windows`)
 
 When these values change, update them centrally in the shared Dockerfile `ARG`s rather than drifting tiers or families independently.
 
@@ -157,6 +165,7 @@ Each published image should receive:
 | `dev-web` | `linux/amd64` |
 | `tauri-dev-desktop` | `linux/amd64` |
 | `tauri-dev-mobile` | `linux/amd64` |
+| `tauri-dev-windows` | `linux/amd64` |
 
 The `linux/arm64` CI variants are required by downstream Linux ARM jobs that run on `ubuntu-24.04-arm` (desktop releases, Rust release builds, and ARM binary-compile jobs).
 
@@ -227,6 +236,7 @@ Pick the leanest tier that covers the repo's toolchain:
 - JS/TS only: `ci-web` / `dev-web`
 - Tauri desktop (pnpm or Bun): `tauri-ci-desktop` / `tauri-dev-desktop`
 - Tauri Android/mobile: `tauri-ci-mobile` / `tauri-dev-mobile`
+- Windows cross-compilation from Linux or WSL2: `tauri-dev-windows` (usage in [`shared-image-layout.md`](./shared-image-layout.md#cross-compiling-for-windows-tauri-dev-windows))
 
 Use the CI images when:
 

@@ -98,6 +98,12 @@ jobs:
             platforms: linux/amd64
             smoke_platform: linux/amd64
             smoke_profile: dev-mobile
+          - label: Dev Windows image
+            image: tauri-dev-windows
+            target: dev-windows
+            platforms: linux/amd64
+            smoke_platform: linux/amd64
+            smoke_profile: dev-windows
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.3

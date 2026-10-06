@@ -8,7 +8,7 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 
 - Shared GitHub Actions workflows for CI image publication
 - Shared, reusable GitHub Actions workflows consumer repos call directly (e.g. AppImage packaging)
-- Shared Docker images in granular tiers: pure Rust, JS/TS, Tauri desktop, and Tauri mobile
+- Shared Docker images in granular tiers: pure Rust, JS/TS, Tauri desktop, Tauri mobile, and Windows cross-compilation
 - Runbooks for publish, rollback, and digest pinning
 
 ## Shared Images
@@ -23,12 +23,13 @@ Pick the leanest tier that covers the repo's toolchain:
 - `ghcr.io/liminal-hq/dev-web` — JS runtimes for devcontainers/toolbox use
 - `ghcr.io/liminal-hq/tauri-dev-desktop` — Tauri desktop devcontainers
 - `ghcr.io/liminal-hq/tauri-dev-mobile` — Tauri Android devcontainers
+- `ghcr.io/liminal-hq/tauri-dev-windows` — Tauri desktop devcontainers that cross-compile Windows builds from Linux or WSL2 (not for Windows runners); usage in [`docs/reference/shared-image-layout.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-layout.md#cross-compiling-for-windows-tauri-dev-windows)
 
 ## Platform Support
 
 - `ci-rust`, `ci-web`, and `tauri-ci-desktop` publish `linux/amd64` and `linux/arm64`.
 - `tauri-ci-mobile` currently publishes `linux/amd64` only.
-- Dev images (`dev-rust`, `dev-web`, `tauri-dev-desktop`, `tauri-dev-mobile`) currently publish `linux/amd64` only.
+- Dev images (`dev-rust`, `dev-web`, `tauri-dev-desktop`, `tauri-dev-mobile`, `tauri-dev-windows`) currently publish `linux/amd64` only.
 
 The ARM variants exist today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release and binary-compile jobs.
 
@@ -60,6 +61,7 @@ The ARM variants exist today to support downstream Linux ARM runners such as `ub
   - `dev-web`
   - `dev-desktop`
   - `dev-mobile`
+  - `dev-windows`
 - Shared image layout reference: [`docs/reference/shared-image-layout.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-layout.md)
 - Shared image implementation spec: [`docs/reference/shared-image-implementation-spec.md`](https://github.com/liminal-hq/.github/blob/main/docs/reference/shared-image-implementation-spec.md)
 

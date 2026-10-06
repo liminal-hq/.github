@@ -14,6 +14,7 @@ ARG ANDROID_CMDLINE_TOOLS=11076708
 ARG ANDROID_PLATFORM=36
 ARG ANDROID_BUILD_TOOLS=36.0.0
 ARG ANDROID_NDK=28.2.13676358
+ARG CARGO_XWIN_VERSION=0.23.1
 
 # CI base: universal CLI tooling shared by every CI image tier.
 # GUI/Tauri system libraries intentionally live in the desktop tier, not here,
@@ -347,3 +348,54 @@ RUN yes | sdkmanager --licenses \
       "ndk;${ANDROID_NDK}" \
     && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android \
     && rm -rf "${ANDROID_HOME}/cmdline-tools/latest/.downloadIntermediates"
+
+# Final dev Windows image: cross-compiles Tauri apps for Windows from Linux.
+# Builds on the dev desktop tier and adds the LLVM/clang-cl toolchain, NSIS,
+# `cargo-xwin` and the Windows MSVC Rust targets, so `cargo xwin build --target
+# x86_64-pc-windows-msvc` (and aarch64) works without per-session setup.
+# Intended for a Linux host or WSL2, not for Windows runners.
+FROM dev-desktop AS dev-windows
+
+ARG DEBIAN_FRONTEND
+ARG CARGO_XWIN_VERSION
+
+USER root
+
+# clang/lld/llvm provide the compiler, linker and archive tools; nsis lets
+# `tauri build` produce NSIS installers when cross-compiling. Ubuntu ships
+# versioned LLVM tools only, and no `clang-cl` name: `clang` run under the name
+# `clang-cl` switches to the MSVC-compatible driver, so symlink the tool names
+# that tauri-winres and cc-rs look up on PATH, resolving the LLVM directory
+# instead of hard-coding its version. Each tool is checked so a missing one
+# fails the layer.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang lld llvm nsis \
+    && rm -rf /var/lib/apt/lists/* \
+    && LLVM_BIN="$(find /usr/lib -mindepth 2 -maxdepth 2 -type d -path '/usr/lib/llvm-*/bin' | sort -V | tail -n 1)" \
+    && ln -s "${LLVM_BIN}/clang" /usr/local/bin/clang-cl \
+    && for tool in llvm-lib llvm-ar llvm-rc lld-link; do \
+      ln -s "${LLVM_BIN}/${tool}" "/usr/local/bin/${tool}"; \
+    done \
+    && for tool in clang-cl llvm-lib llvm-ar llvm-rc lld-link makensis; do \
+      command -v "${tool}" || exit 1; \
+    done
+
+# The Microsoft CRT and Windows SDK are deliberately not baked into the image:
+# `cargo-xwin` downloads them on first use (about 1 GB, and using them means
+# accepting Microsoft's licence terms), and the image must not redistribute
+# them. The cache directory is created empty and owned by the devcontainer
+# user so a named volume mounted there inherits that ownership and keeps the
+# download across runs: `-v xwin-cache:/home/vscode/.cache/cargo-xwin`.
+ENV XWIN_CACHE_DIR=/home/vscode/.cache/cargo-xwin
+
+# An empty `/target` owned by the devcontainer user, so a named volume mounted
+# there (for `CARGO_TARGET_DIR=/target`) is writable without a `chown`.
+RUN mkdir -p /target && chown vscode:vscode /target
+
+USER vscode
+
+RUN mkdir -p "${XWIN_CACHE_DIR}"
+
+# cargo-xwin pinned for reproducible cross builds, plus the Windows MSVC targets.
+RUN cargo install --locked cargo-xwin --version "${CARGO_XWIN_VERSION}" \
+    && rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
