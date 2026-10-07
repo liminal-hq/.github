@@ -83,7 +83,11 @@ jobs:
           # environment, breaking quick-sharun.
           # shellcheck disable=SC2086 # intentionally word-split: space-separated package list
           pacman -S --noconfirm --needed ${EXTRA_PACMAN_PACKAGES}
-          get-debloated-pkgs --add-common --prefer-nano
+          # The common set minus glycin-mini, asked for by name. pkgforge builds its debloated glycin
+          # separately from Arch's gdk-pixbuf2, and when the two drift apart every GTK program in the
+          # container, quick-sharun's own test included, dies with an undefined glycin symbol.
+          get-debloated-pkgs --add-mesa --prefer-nano \
+            icu-mini opus-mini libxml2-mini qt6-base-mini gtk3-mini gtk4-mini
           # shellcheck disable=SC2086 # intentionally word-split: space-separated package list
           for pkg in ${EXTRA_AUR_PACKAGES}; do
             make-aur-package "$pkg"

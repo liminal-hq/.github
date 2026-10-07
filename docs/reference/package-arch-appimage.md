@@ -58,12 +58,13 @@ On the caller's existing build job: drop `appimage` from the `tauri build --bund
 - **Don't re-run a full `pacman -Syu` after `anylinux-setup-action`.** The setup action already does one. Running it again immediately after knocks `patchelf` out of the environment, breaking `quick-sharun` with `Missing dependency 'patchelf'!`. Use `pacman -S --noconfirm --needed` for anything extra instead.
 - **Set `OUTPATH`.** `quick-sharun` writes the AppImage into the current working directory if `OUTPATH` isn't set, not a `dist/` subdirectory — this workflow sets `OUTPATH=./dist` explicitly.
 - **Pick one icon, don't glob.** Tauri's `.deb` bundler ships multiple icon resolutions under the same basename. Copying them all into `AppDir/` in one `cp` invocation hits `cp`'s just-created-file overwrite guard. This workflow picks the largest via a version-sorted `find` instead.
+- **The debloated `glycin` stays out of the install.** `get-debloated-pkgs --add-common` includes `glycin-mini`, which pkgforge builds separately from Arch's `gdk-pixbuf2`. When the two drift apart (`glycin-ng` 0.5.2 lacks `gly_pixel_density_new`, which `gdk-pixbuf2` 2.44.8 calls) every GTK program in the container dies with `symbol lookup error`, including `quick-sharun --test`. The workflow asks for the other six common packages by name, with Mesa, instead.
 - **`libayatana-appindicator3`'s Arch package is `libayatana-appindicator`**, in the official `extra` repo — not `libappindicator-gtk3`, which doesn't exist on Arch under that name at all (cloning it from the AUR silently produces an empty repository rather than a clear error).
 
 ## Design intent
 
 - **Packaging-only, deliberately.** Building the `.deb` inside this workflow too would mean recompiling the same Rust project a second time per release; consumer repos already do that build as part of their own pipeline.
-- **Pinned by digest, not tag.** `ghcr.io/pkgforge-dev/archlinux:latest` floats; every consumer pinning the same digest, bumped in one place, keeps this reproducible.
+- **Only the base image is pinned.** The digest fixes the container's base layer, bumped in one place for every consumer. Everything installed on top of it is current at the time of the run: Arch's rolling repositories, pkgforge's debloated packages (a floating `continuous` release), and the `quick-sharun` and `get-debloated-pkgs` scripts (fetched from pkgforge's `main`). A run can therefore break without any change here.
 - **Arch, not Ubuntu.** `quick-sharun` is built and tested primarily for Arch by its own maintainer. See the decision record below for why this route was chosen over hand-rolling an Arch image around Tauri's own experimental bundler.
 
 ## Related docs
