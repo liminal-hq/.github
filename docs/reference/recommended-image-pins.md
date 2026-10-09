@@ -6,15 +6,16 @@ Update this table in the same change whenever a publish is promoted as the new r
 
 ## Current Pins
 
-Last updated: 2026-10-09.
+Last updated: 2026-10-09. All images are from the `20261009-2d6e4fc` publish, which is the first publish where every image, mobile included, built from `main` since 2026-09-14.
 
-| Image | Digest | Built from | Notes |
-| --- | --- | --- | --- |
-| `tauri-ci-desktop` | `sha256:80599068a60868d309be1a6c63716df052c0599716e4bb90e01fbc94c7df119f` | `sha-e92450c` (2026-10-06) | Rust 1.96.1, Node 24, pnpm 10.28.2, Bun 1.3.14 |
-| `ci-rust` | `sha256:45fc1a5f8698293019d4f60b9953af8f79328316fe8a5d81838b1dc334d99104` | `sha-e92450c` (2026-10-06) | Rust 1.96.1 |
-| `ci-web` | `sha256:5cf14c8bb38b28b3e02376e2fad72e0293fcdf06bf06582785b9f49058020df4` | `sha-e92450c` (2026-10-06) | Node 24, pnpm 10.28.2, Bun 1.3.14 |
-| `tauri-dev-desktop` | `sha256:36624f836e672cdf72e817315b22af1c97f0778fe7c7da22c6cd640497fd8ecd` | `sha-e92450c` (2026-10-06) | Devcontainer family |
-| `tauri-ci-mobile` | `sha256:1deb258a3a7bfceb76048f449aa16ece76b6671212581e6ce4b65e2712e07e59` | `sha-00d0596` (2026-09-14) | Interim: later mobile builds failed until the `sdkmanager` licence fix; replace once the fixed build publishes |
-| `tauri-dev-mobile` | `sha256:ae165bc0c818ef4647aa0df75bfa19e111d1a4b7b1a9d263b8d997836c0aa08b` | `sha-00d0596` (2026-09-14) | Interim, as above |
-
-`dev-rust`, `dev-web` and `tauri-dev-windows` have no recommended pin yet; their first pinned digests are recorded here once a consumer adopts them.
+| Image | Digest | Notes |
+| --- | --- | --- |
+| `tauri-ci-desktop` | `sha256:f35ef8c593216e0135ee3fccd3ae16a7c90d428fd92992db01a0bcff13f1c3ea` | Rust 1.96.1, Node 24, pnpm 10.28.2, Bun 1.3.14 |
+| `ci-rust` | `sha256:f12097be8cc22eb5145a46bc9f75b38a67fedd5833add4392e11ce85023e64df` | Rust 1.96.1 |
+| `ci-web` | `sha256:0810aefe705cab4486bf1630249a30aa5e2f9295498cf67636bc8fb4ea2bf763` | Node 24, pnpm 10.28.2, Bun 1.3.14 |
+| `tauri-ci-mobile` | `sha256:6b6b1a2046b207d2004f01099bd4f8a87c4545c7e657292d2a7cb079df4d824a` | Desktop tier plus JDK 17, Android platform 36, NDK 28.2.13676358 |
+| `dev-rust` | `sha256:c96b3e1db91847dcd92c4b6e2ec534e2b31cdf5989aa7cc64bb78fecfe1f780c` | Devcontainer family |
+| `dev-web` | `sha256:64978ed423d66decc27d84222f54f969249961dc0ee5b97c49d4d3ae0a14fc63` | Devcontainer family |
+| `tauri-dev-desktop` | `sha256:e3fdb3732c5ca77b65e2bc3b76e63230d3384c6d10a75ab3294a7967436f881e` | Devcontainer family |
+| `tauri-dev-mobile` | `sha256:eda2ede0b894157a8fa8071187548f15577a4f6d71159fb52a72d9f2b367bdcf` | Devcontainer family |
+| `tauri-dev-windows` | `sha256:4eb814f0cc2006c593e8d61c80b33560bf6974f5f30021fdbac632c1e747837f` | Windows cross-compile; the xwin cache is empty and downloaded on first use |
