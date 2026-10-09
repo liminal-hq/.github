@@ -130,6 +130,7 @@ jobs:
             type=raw,value=staging,enable=${{ github.ref != 'refs/heads/main' }}
             type=sha,prefix=sha-
             type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=raw,value={{date 'YYYYMMDD'}}-{{sha}}
 
       - name: Build smoke image
         uses: docker/build-push-action@v6.19.2
@@ -343,6 +344,7 @@ jobs:
             type=raw,value=staging,enable=${{ github.ref != 'refs/heads/main' }}
             type=sha,prefix=sha-
             type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=raw,value={{date 'YYYYMMDD'}}-{{sha}}
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
@@ -359,14 +361,25 @@ jobs:
           IMAGE_REF: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
         run: docker buildx imagetools inspect "${IMAGE_REF}:${VERSION}"
 
+      - name: Resolve manifest digest
+        id: manifest
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          IMAGE_REF: ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+        run: |
+          digest="$(docker buildx imagetools inspect "${IMAGE_REF}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+
       - name: Write publish summary
         env:
+          DIGEST: ${{ steps.manifest.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           echo "## ${{ matrix.label }} published" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Image: \`${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Platforms: \`linux/amd64,linux/arm64\` (built natively per-arch, merged)" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Digest: \`${DIGEST}\`" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "### Tags" >> "${GITHUB_STEP_SUMMARY}"
           echo "${TAGS}" | sed 's/^/- `/; s/$/`/' >> "${GITHUB_STEP_SUMMARY}"

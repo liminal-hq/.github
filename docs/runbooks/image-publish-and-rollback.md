@@ -60,18 +60,23 @@ Each image publish produces:
 
 1. `latest` (from `main`) or `staging` (from other refs)
 2. `sha-<commit>`
-3. `YYYYMMDD` schedule tag
+3. `YYYYMMDD-<commit>` (every publish: push, manual, or scheduled)
+4. `YYYYMMDD` (scheduled runs only)
+
+Only the manifest digest (`sha256:...`) is immutable. Every tag above is mutable: a scheduled or manual rebuild at an unchanged commit re-points `sha-<commit>` at the new build, which picks up newer base packages. `YYYYMMDD-<commit>` is a readable record of when a build was made, not a guarantee that it never moves if the same commit is rebuilt on the same day. Pin consumers by digest, and keep the dated tag in a comment beside it.
 
 ## Consumer Rollout
 
 1. Start with `latest` in non-critical CI or local testing.
-2. For production rollout, pin consumer repos to a tested `sha-*` tag.
-3. Keep previous digest/tag noted for immediate fallback.
+2. For production rollout, pin consumer repos by digest, for example `image: ghcr.io/liminal-hq/tauri-ci-desktop@sha256:<digest>`, with a comment recording the dated tag it came from.
+3. Take the digest from the `Digest` line in the publish workflow's step summary, or from `docs/reference/recommended-image-pins.md`.
+4. Bump the pin deliberately, one consumer at a time, when the image's contents (Rust, Bun, Node, Android) need to change for that repo.
+5. Keep the previous digest noted for immediate fallback.
 
 ## Rollback Procedure
 
-1. Identify the last known-good image tag or digest.
-2. Update consumer workflow image references to the known-good `sha-*` tag.
+1. Identify the last known-good digest. The dated tags in the package's version list (`gh api orgs/liminal-hq/packages/container/<image>/versions`) show which build each digest came from.
+2. Update consumer workflow image references to that digest.
 3. Re-run CI to validate recovery.
 4. Open a follow-up issue in this repository documenting:
    - regression summary
