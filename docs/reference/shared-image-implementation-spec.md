@@ -151,7 +151,10 @@ Each published image should receive:
 
 1. `latest` (on `main`) or `staging` (on other refs)
 2. `sha-<commit>`
-3. `YYYYMMDD` (scheduled runs)
+3. `YYYYMMDD-<commit>` (every publish)
+4. `YYYYMMDD` (scheduled runs)
+
+Tags are mutable; the manifest digest is the only immutable reference. Consumers should pin by digest (see `docs/reference/recommended-image-pins.md`).
 
 ### Platform policy
 
