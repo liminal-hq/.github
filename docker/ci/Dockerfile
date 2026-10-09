@@ -154,7 +154,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" \
     && mv cmdline-tools latest
 
 # Pin Android platform/build-tools/NDK to the shared CI baseline.
-RUN yes | sdkmanager --licenses \
+RUN { yes || true; } | sdkmanager --licenses \
     && sdkmanager --channel=0 --install \
       "platform-tools" \
       "platforms;android-${ANDROID_PLATFORM}" \
@@ -340,7 +340,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" \
     && mv cmdline-tools latest
 
 # Pin Android platform/build-tools/NDK to the shared dev baseline.
-RUN yes | sdkmanager --licenses \
+RUN { yes || true; } | sdkmanager --licenses \
     && sdkmanager --channel=0 --install \
       "platform-tools" \
       "platforms;android-${ANDROID_PLATFORM}" \
