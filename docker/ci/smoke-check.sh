@@ -40,6 +40,26 @@ case "${profile}" in
       ! command -v cargo
     '
     ;;
+  ci-dos)
+    run_in_image '
+      command -v cargo rustup bun gh jq mtools mcopy mattrib mkfs.fat patch python3
+      cargo --version
+      bun --version
+      gh --version
+      jq --version
+      [[ "$DOS_TOOLCHAIN" == /opt/dos-toolchain ]]
+      djgpp="$DOS_TOOLCHAIN/djgpp/djgpp/bin"
+      "$djgpp/i586-pc-msdosdjgpp-ar" --version
+      "$djgpp/i586-pc-msdosdjgpp-gcc" --version
+      "$DOS_TOOLCHAIN"/dosbox/*/dosbox --version
+      test -f "$DOS_TOOLCHAIN"/cwsdpmi/bin/CWSDPMI.EXE
+      rustup component list --installed | grep -q rust-src
+      rustup target list --installed | grep -q i586-unknown-linux-gnu
+      rustup target list --installed | grep -q wasm32-unknown-unknown
+      echo "int main(void){return 0;}" | gcc -m32 -x c - -o /dev/null
+      ! command -v node
+    '
+    ;;
   ci-desktop)
     run_in_image '
       command -v cargo rustup node pnpm bun cargo-tauri gh jq

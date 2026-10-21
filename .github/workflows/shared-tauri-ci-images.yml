@@ -74,6 +74,12 @@ jobs:
             platforms: linux/amd64
             smoke_platform: linux/amd64
             smoke_profile: ci-mobile
+          - label: CI DOS image
+            image: ci-dos
+            target: ci-dos
+            platforms: linux/amd64
+            smoke_platform: linux/amd64
+            smoke_profile: ci-dos
           - label: Dev Rust image
             image: dev-rust
             target: dev-rust

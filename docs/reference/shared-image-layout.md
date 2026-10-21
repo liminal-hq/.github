@@ -13,6 +13,7 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 | --- | --- | --- | --- |
 | `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Rust toolchain (pinned), clippy, rustfmt, cargo-nextest, gh | Pure-Rust libraries, CLIs, and TUIs |
 | `ghcr.io/liminal-hq/ci-web` | `ci-web` | Node, pnpm, Bun (pinned), gh | JS/TS-only projects |
+| `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | ci-rust + rust-src, i586 and wasm32 targets + DJGPP/DOSBox Staging/CWSDPMI + Bun + gcc-multilib/mtools/dosfstools | Building MS-DOS programs in Rust and C |
 | `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | ci-rust + Node/pnpm/Bun + GTK/webkit2gtk system stack + GStreamer/xvfb/emoji fonts + tauri-cli | Tauri desktop CI jobs |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | ci-desktop + Java 17 + Android SDK/NDK + Android Rust targets | Android/mobile CI jobs |
 | `ghcr.io/liminal-hq/dev-rust` | `dev-rust` | Rust toolchain under the user home | Pure-Rust devcontainers and toolbox use |
@@ -27,6 +28,9 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 ci-base (unpublished)          universal CLI: certs, curl, wget, git, gh, file,
 │                              build-essential, pkg-config, zip, unzip, jq
 ├── ci-rust                    + rustup (pinned) + clippy + rustfmt + cargo-nextest
+│   ├── ci-dos                 + rust-src, i586 + wasm32 targets, DJGPP, DOSBox
+│   │                            Staging, CWSDPMI, Bun, gcc-multilib, mtools,
+│   │                            dosfstools
 │   └── ci-desktop             + Node/pnpm/Bun + GTK/webkit stack + GStreamer/xvfb/
 │       │                        emoji fonts + tauri-cli
 │       └── ci-mobile          + Java 17 + Android SDK/NDK + Android Rust targets
@@ -52,6 +56,7 @@ The JS runtime install block (Node + pnpm + Bun) intentionally appears in both t
 | `ci-rust` | `linux/amd64`, `linux/arm64` | Multi-arch because Rust release jobs already run on both x64 and ARM runners. |
 | `ci-web` | `linux/amd64`, `linux/arm64` | Multi-arch for ARM binary-compile jobs (e.g. Bun `--target` builds on `ubuntu-24.04-arm`). |
 | `tauri-ci-desktop` | `linux/amd64`, `linux/arm64` | Multi-arch because downstream Linux desktop release jobs already run on both x64 and ARM runners. |
+| `ci-dos` | `linux/amd64` | DJGPP's Linux build and DOSBox Staging's release are x86-64 only. |
 | `tauri-ci-mobile` | `linux/amd64` | ARM is not part of the current shared mobile CI contract. |
 | `dev-rust` | `linux/amd64` | Dev-family ARM support is a possible follow-up, not a current baseline. |
 | `dev-web` | `linux/amd64` | Dev-family ARM support is a possible follow-up, not a current baseline. |

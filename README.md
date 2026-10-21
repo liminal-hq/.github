@@ -17,6 +17,7 @@ Pick the leanest tier that covers the repo's toolchain:
 
 - `ghcr.io/liminal-hq/ci-rust` — Rust toolchain + clippy/rustfmt/cargo-nextest (pure-Rust CI)
 - `ghcr.io/liminal-hq/ci-web` — Node + pnpm + Bun (JS/TS-only CI)
+- `ghcr.io/liminal-hq/ci-dos` — Rust + DJGPP, DOSBox Staging, CWSDPMI, Bun and the 32-bit and disk-image tools (building MS-DOS programs in Rust and C)
 - `ghcr.io/liminal-hq/tauri-ci-desktop` — Rust + JS runtimes + Tauri desktop system stack
 - `ghcr.io/liminal-hq/tauri-ci-mobile` — desktop stack + Java + Android SDK/NDK
 - `ghcr.io/liminal-hq/dev-rust` — Rust toolchain for devcontainers/toolbox use
@@ -28,7 +29,7 @@ Pick the leanest tier that covers the repo's toolchain:
 ## Platform Support
 
 - `ci-rust`, `ci-web`, and `tauri-ci-desktop` publish `linux/amd64` and `linux/arm64`.
-- `tauri-ci-mobile` currently publishes `linux/amd64` only.
+- `ci-dos` and `tauri-ci-mobile` currently publish `linux/amd64` only (the DJGPP and DOSBox Staging builds are x86-64 only).
 - Dev images (`dev-rust`, `dev-web`, `tauri-dev-desktop`, `tauri-dev-mobile`, `tauri-dev-windows`) currently publish `linux/amd64` only.
 
 The ARM variants exist today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release and binary-compile jobs.
@@ -55,6 +56,7 @@ The ARM variants exist today to support downstream Linux ARM runners such as `ub
 - Docker targets:
   - `ci-rust`
   - `ci-web`
+  - `ci-dos`
   - `ci-desktop`
   - `ci-mobile`
   - `dev-rust`

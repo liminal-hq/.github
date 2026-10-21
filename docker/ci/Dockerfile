@@ -15,6 +15,12 @@ ARG ANDROID_PLATFORM=36
 ARG ANDROID_BUILD_TOOLS=36.0.0
 ARG ANDROID_NDK=28.2.13676358
 ARG CARGO_XWIN_VERSION=0.23.1
+ARG DJGPP_URL=https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+ARG DJGPP_SHA256=8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00
+ARG DOSBOX_URL=https://github.com/dosbox-staging/dosbox-staging/releases/download/v0.83.0/dosbox-staging-linux-x86_64-v0.83.0.tar.xz
+ARG DOSBOX_SHA256=d3a94f7f1c3e68a47ec88d61145506c7904452adb0c9c5928cb8cfe2331d6c5c
+ARG CWSDPMI_URL=https://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7b.zip
+ARG CWSDPMI_SHA256=deacda0488e1cdd7c4a9f32fab45662b34c0ed6b2d7d4d13bc07041b62004a8c
 
 # CI base: universal CLI tooling shared by every CI image tier.
 # GUI/Tauri system libraries intentionally live in the desktop tier, not here,
@@ -79,6 +85,50 @@ RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
     && apt-get update && apt-get install -y --no-install-recommends nodejs \
     && npm install -g "pnpm@${PNPM_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
+
+# Bun pinned for root-friendly CI usage.
+ENV BUN_INSTALL=/usr/local/bun \
+    PATH=/usr/local/bun/bin:${PATH}
+
+RUN curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
+
+# CI DOS tier: the toolchain for building MS-DOS programs written in Rust and C, on the Rust tier.
+# Published as ghcr.io/liminal-hq/ci-dos. DJGPP (the cross-compiler and its C library), DOSBox Staging (to run programs
+# headless) and CWSDPMI (the DOS extender that ships beside the programs) are installed under DOS_TOOLCHAIN with the layout
+# `djgpp/`, `dosbox/` and `cwsdpmi/`, and every download is checked against its pinned SHA-256. The Rust toolchain gains
+# rust-src (for -Zbuild-std with a custom target), the i586 Linux target (native 32-bit checks) and the wasm32 target.
+# gcc-multilib, mtools and dosfstools cover 32-bit native builds and floppy images; libfl2 is loaded by DJGPP's tools.
+# Bun uses the same pin as the web and desktop tiers. Single-platform: the DJGPP and DOSBox builds are x86-64 only.
+FROM ci-rust AS ci-dos
+
+ARG DEBIAN_FRONTEND
+ARG BUN_VERSION
+ARG DJGPP_URL
+ARG DJGPP_SHA256
+ARG DOSBOX_URL
+ARG DOSBOX_SHA256
+ARG CWSDPMI_URL
+ARG CWSDPMI_SHA256
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bzip2 dosfstools gcc-multilib libfl2 mtools patch python3 xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV DOS_TOOLCHAIN=/opt/dos-toolchain
+
+RUN mkdir -p "${DOS_TOOLCHAIN}/djgpp" "${DOS_TOOLCHAIN}/dosbox" "${DOS_TOOLCHAIN}/cwsdpmi" /tmp/dos-dl \
+    && cd /tmp/dos-dl \
+    && curl -fsSL -o djgpp.tar.bz2 "${DJGPP_URL}" \
+    && curl -fsSL -o dosbox.tar.xz "${DOSBOX_URL}" \
+    && curl -fsSL -o cwsdpmi.zip "${CWSDPMI_URL}" \
+    && printf '%s  %s\n' "${DJGPP_SHA256}" djgpp.tar.bz2 "${DOSBOX_SHA256}" dosbox.tar.xz "${CWSDPMI_SHA256}" cwsdpmi.zip | sha256sum -c - \
+    && tar -xjf djgpp.tar.bz2 -C "${DOS_TOOLCHAIN}/djgpp" \
+    && tar -xJf dosbox.tar.xz -C "${DOS_TOOLCHAIN}/dosbox" \
+    && unzip -q cwsdpmi.zip -d "${DOS_TOOLCHAIN}/cwsdpmi" \
+    && rm -rf /tmp/dos-dl
+
+RUN rustup component add rust-src \
+    && rustup target add i586-unknown-linux-gnu wasm32-unknown-unknown
 
 # Bun pinned for root-friendly CI usage.
 ENV BUN_INSTALL=/usr/local/bun \

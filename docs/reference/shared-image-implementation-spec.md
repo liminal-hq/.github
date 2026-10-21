@@ -17,6 +17,7 @@ Published image set:
 | --- | --- | --- |
 | `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Pure-Rust CI jobs |
 | `ghcr.io/liminal-hq/ci-web` | `ci-web` | JS/TS-only CI jobs |
+| `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | CI jobs that build MS-DOS programs in Rust and C |
 | `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | Tauri desktop CI jobs |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | Android/mobile CI jobs |
 | `ghcr.io/liminal-hq/dev-rust` | `dev-rust` | Pure-Rust devcontainers and toolbox use |
@@ -50,6 +51,10 @@ The shared Dockerfile builds two parallel tier chains. Each tier adds exactly on
   - root-friendly tool paths under `/usr/local`
 - `ci-web`
   - adds pinned Node, pnpm, and Bun on `ci-base` (no Rust)
+- `ci-dos`
+  - builds on `ci-rust`
+  - adds `rust-src` and the `i586-unknown-linux-gnu` and `wasm32-unknown-unknown` Rust targets, `gcc-multilib`, `mtools`, `dosfstools`, `patch`, `python3` and `libfl2`, and pinned Bun
+  - installs DJGPP, DOSBox Staging and CWSDPMI under `DOS_TOOLCHAIN` (`/opt/dos-toolchain`, with `djgpp/`, `dosbox/` and `cwsdpmi/` inside), each download checked against a SHA-256 pinned in the Dockerfile
 - `ci-desktop`
   - builds on `ci-rust`
   - adds the JS runtimes (same pins as `ci-web`), the GTK/webkit2gtk/appindicator/rsvg system stack, patchelf/xdg-utils/libssl-dev, GStreamer (base + bad), emoji fonts, xvfb, and `cargo-tauri`
@@ -163,6 +168,7 @@ Tags are mutable; the manifest digest is the only immutable reference. Consumers
 | `ci-rust` | `linux/amd64`, `linux/arm64` |
 | `ci-web` | `linux/amd64`, `linux/arm64` |
 | `tauri-ci-desktop` | `linux/amd64`, `linux/arm64` |
+| `ci-dos` | `linux/amd64` |
 | `tauri-ci-mobile` | `linux/amd64` |
 | `dev-rust` | `linux/amd64` |
 | `dev-web` | `linux/amd64` |
@@ -237,6 +243,7 @@ Pick the leanest tier that covers the repo's toolchain:
 
 - Pure Rust: `ci-rust` / `dev-rust`
 - JS/TS only: `ci-web` / `dev-web`
+- MS-DOS programs in Rust and C: `ci-dos`
 - Tauri desktop (pnpm or Bun): `tauri-ci-desktop` / `tauri-dev-desktop`
 - Tauri Android/mobile: `tauri-ci-mobile` / `tauri-dev-mobile`
 - Windows cross-compilation from Linux or WSL2: `tauri-dev-windows` (usage in [`shared-image-layout.md`](./shared-image-layout.md#cross-compiling-for-windows-tauri-dev-windows))
