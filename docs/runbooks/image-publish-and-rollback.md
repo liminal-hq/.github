@@ -31,6 +31,8 @@ Published images:
    Current platforms: `linux/amd64`
 9. `ghcr.io/liminal-hq/tauri-dev-windows`
    Current platforms: `linux/amd64`
+10. `ghcr.io/liminal-hq/ci-dos`
+   Current platforms: `linux/amd64`
 
 Downstream consumers should not assume ARM support exists for the mobile or dev image families unless that contract is expanded in a later change.
 
@@ -45,11 +47,12 @@ Docker targets:
 7. `dev-desktop`
 8. `dev-mobile`
 9. `dev-windows`
+10. `ci-dos`
 
 Usage guidance:
 
 1. Pick the leanest tier that covers the repo's toolchain: `*-rust` for pure Rust, `*-web` for JS/TS only, `tauri-*-desktop` for Tauri desktop, `tauri-*-mobile` for Android, `tauri-dev-windows` for cross-compiling Windows builds from Linux or WSL2.
-2. Use CI images (`ci-rust`, `ci-web`, `tauri-ci-*`) for CI and other automated pipeline contexts.
+2. Use CI images (`ci-rust`, `ci-web`, `ci-dos`, `tauri-ci-*`) for CI and other automated pipeline contexts.
 3. Use dev images (`dev-rust`, `dev-web`, `tauri-dev-*`) for devcontainers and interactive local development or toolbox use.
 4. Expect CI images to remain root-friendly and minimal.
 5. Expect dev images to use a non-root home-directory layout for writable tool paths.
@@ -89,6 +92,7 @@ The publish workflow runs `docker/ci/smoke-check.sh <profile> <image>` against e
 
 1. Tool availability for the tier:
    - Rust tiers: `cargo`, `rustup`, `cargo-nextest`
+   - `ci-dos`: `bun`, `mcopy`, `mattrib`, `mkfs.fat`, `patch`, `python3`, the DJGPP `i586-pc-msdosdjgpp-gcc` and `-ar` under `DOS_TOOLCHAIN`, DOSBox Staging, `CWSDPMI.EXE`, `rust-src` and the i586 and wasm32 Rust targets, and a 32-bit native C build
    - JS tiers: `node`, `pnpm`, `bun`
    - Tauri tiers: `cargo-tauri`
    - mobile tiers: `sdkmanager`, `java`
@@ -96,10 +100,12 @@ The publish workflow runs `docker/ci/smoke-check.sh <profile> <image>` against e
    - all tiers: `gh`
 2. Leanness:
    - `ci-rust` must not contain `node` or `bun`
+   - `ci-dos` must not contain `node`
    - `ci-web` must not contain `cargo`
    - `dev-windows` must ship an empty xwin cache directory: the Microsoft CRT and Windows SDK are downloaded by the consumer on first use, never baked into the published image
 3. Environment values:
    - `TAURI_BUNDLER_NEW_APPIMAGE_FORMAT=true` (Tauri tiers)
+   - `DOS_TOOLCHAIN` (`ci-dos`)
    - `JAVA_HOME` (mobile images)
    - `ANDROID_HOME` (mobile images)
    - `XWIN_CACHE_DIR` (`dev-windows`)
