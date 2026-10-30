@@ -36,7 +36,7 @@ on:
         description: Space-separated official-repo packages the app needs beyond the shared baseline
         required: false
         type: string
-        default: 'webkit2gtk-4.1 gtk3 libayatana-appindicator patchelf'
+        default: 'webkit2gtk-4.1 gtk3 libayatana-appindicator patchelf gst-plugins-base gst-plugins-good gst-plugin-pipewire'
       extra-aur-packages:
         description: Space-separated AUR packages, built via make-aur-package, if the app needs one not in the official repos
         required: false
@@ -98,6 +98,10 @@ jobs:
         env:
           OUTPATH: ./dist
           VERSION: ${{ inputs.app-version }}
+          # WebKitGTK plays audio through GStreamer. webkit2gtk-4.1 only depends on the GStreamer
+          # libraries, so the plugins (autoaudiosink, the pulse and pipewire sinks) come from the
+          # extra packages above and are deployed into the AppDir here.
+          DEPLOY_GSTREAMER: '1'
         run: |
           set -eu
 
@@ -122,6 +126,12 @@ jobs:
 
           log "Deploying dependencies with quick-sharun"
           quick-sharun ./AppDir/bin/*
+
+          log "Checking the GStreamer audio plugins were bundled"
+          if [ -z "$(find AppDir -name libgstautodetect.so -print -quit)" ]; then
+            echo "::error::libgstautodetect.so (autoaudiosink) is missing from the AppDir"
+            exit 1
+          fi
 
           log "Building the AppImage"
           quick-sharun --make-appimage
