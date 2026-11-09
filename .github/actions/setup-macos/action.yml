@@ -1,0 +1,92 @@
+# Sets up the shared Bun and Rust baseline on native macOS runners.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Set up macOS tooling
+description: Set up the shared Bun and Rust baseline on a native macOS runner.
+
+inputs:
+  install-bun:
+    description: Set to false to skip Bun installation.
+    required: false
+    default: 'true'
+  install-rust:
+    description: Set to false to skip Rust installation and caching.
+    required: false
+    default: 'true'
+  rust-extra-targets:
+    description: Additional comma-separated Rust targets, such as wasm32-unknown-unknown.
+    required: false
+    default: ''
+  rust-cache:
+    description: Set to false to skip Cargo caching.
+    required: false
+    default: 'true'
+  rust-cache-workspaces:
+    description: Cargo workspace and target directory mappings passed to the Rust cache action.
+    required: false
+    default: ''
+
+outputs:
+  bun-version:
+    description: Bun version from the shared image baseline.
+    value: ${{ steps.versions.outputs.bun }}
+  rust-toolchain:
+    description: Rust toolchain version from the shared image baseline.
+    value: ${{ steps.versions.outputs.rust }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check runner platform
+      if: runner.os != 'macOS'
+      shell: bash
+      run: |
+        echo '::error::This action requires a native macOS runner.'
+        exit 1
+
+    - name: Read shared image versions
+      id: versions
+      shell: bash
+      env:
+        ACTION_DIRECTORY: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        dockerfile="${ACTION_DIRECTORY}/../../../docker/ci/Dockerfile"
+        bun="$(sed -n 's/^ARG BUN_VERSION=//p' "$dockerfile")"
+        rust="$(sed -n 's/^ARG RUST_TOOLCHAIN=//p' "$dockerfile")"
+        if [[ ! "$bun" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! "$rust" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo '::error::The shared image Dockerfile must contain one exact Bun and Rust version.'
+          exit 1
+        fi
+        printf 'bun=%s\nrust=%s\n' "$bun" "$rust" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Bun
+      if: inputs.install-bun == 'true'
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ steps.versions.outputs.bun }}
+
+    - name: Set up Rust and Apple targets
+      if: inputs.install-rust == 'true'
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ steps.versions.outputs.rust }}
+        targets: aarch64-apple-darwin,x86_64-apple-darwin,${{ inputs.rust-extra-targets }}
+        components: rustfmt,clippy
+
+    - name: Select the shared Rust toolchain
+      if: inputs.install-rust == 'true'
+      shell: bash
+      env:
+        SHARED_RUST_TOOLCHAIN: ${{ steps.versions.outputs.rust }}
+      run: | # zizmor: ignore[github-env] Only a numeric Rust version is written to the environment.
+        [[ "$SHARED_RUST_TOOLCHAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+        printf 'RUSTUP_TOOLCHAIN=%s\n' "$SHARED_RUST_TOOLCHAIN" >> "$GITHUB_ENV"
+
+    - name: Cache Cargo dependencies and build outputs
+      if: inputs.install-rust == 'true' && inputs.rust-cache == 'true'
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: ${{ inputs.rust-cache-workspaces }}
