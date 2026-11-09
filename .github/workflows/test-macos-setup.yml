@@ -1,4 +1,4 @@
-# Verifies shared macOS setup with universal builds of Jar and Lieutenant Fizz.
+# Verifies shared macOS setup and optionally builds Jar and Lieutenant Fizz.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch'
     name: Test setup with ${{ matrix.project }}
     runs-on: macos-latest
     timeout-minutes: 60
@@ -97,6 +98,36 @@ jobs:
           bun run build:app
           bun run tauri build --target universal-apple-darwin --bundles dmg
           find apps/player/src-tauri/target/universal-apple-darwin/release/bundle -name '*.dmg' -print | grep -q .
+
+  toolchain:
+    name: Test shared toolchain setup
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          persist-credentials: false
+      - name: Create a different repository toolchain selection
+        shell: bash
+        run: printf '[toolchain]\nchannel = "stable"\n' > rust-toolchain.toml
+      - name: Set up shared tooling
+        id: setup
+        uses: ./.github/actions/setup-macos
+        with:
+          rust-extra-targets: wasm32-unknown-unknown
+          rust-cache: 'false'
+      - name: Verify versions and targets
+        shell: bash
+        env:
+          SHARED_BUN: ${{ steps.setup.outputs.bun-version }}
+          SHARED_RUST: ${{ steps.setup.outputs.rust-toolchain }}
+        run: |
+          set -euo pipefail
+          [[ "$(bun --version)" == "$SHARED_BUN" ]]
+          [[ "$(rustc --version)" == "rustc $SHARED_RUST "* ]]
+          installed="$(rustup target list --installed)"
+          grep -qx aarch64-apple-darwin <<< "$installed"
+          grep -qx x86_64-apple-darwin <<< "$installed"
+          grep -qx wasm32-unknown-unknown <<< "$installed"
 
   bun-only:
     name: Test Bun-only setup

@@ -35,4 +35,4 @@ Checks the shared [Windows setup action](../actions/setup-windows/README.md) on 
 
 ## `test-macos-setup.yml`
 
-Checks the shared [macOS setup action](../actions/setup-macos/README.md) against pinned Jar and Lieutenant Fizz snapshots, including their universal DMG builds.
+Checks the shared [macOS setup action](../actions/setup-macos/README.md) and its toolchain on PRs and pushes. Manual runs can also build universal DMGs from pinned Jar and Lieutenant Fizz snapshots.
