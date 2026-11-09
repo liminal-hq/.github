@@ -13,7 +13,7 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 | --- | --- | --- | --- |
 | `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Rust toolchain (pinned), clippy, rustfmt, cargo-nextest, gh | Pure-Rust libraries, CLIs, and TUIs |
 | `ghcr.io/liminal-hq/ci-web` | `ci-web` | Node, pnpm, Bun (pinned), gh | JS/TS-only projects |
-| `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | ci-rust + rust-src, i586 and wasm32 targets + DJGPP/DOSBox Staging/CWSDPMI + Bun + gcc-multilib/mtools/dosfstools | Building MS-DOS programs in Rust and C |
+| `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | ci-rust + rust-src, i586 and wasm32 targets + DJGPP/DOSBox Staging/CWSDPMI + Bun + QEMU/NASM + gcc-multilib/mtools/dosfstools | Building and testing MS-DOS programs in Rust and C |
 | `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | ci-rust + Node/pnpm/Bun + GTK/webkit2gtk system stack + GStreamer/xvfb/emoji fonts + tauri-cli | Tauri desktop CI jobs |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | ci-desktop + Java 17 + Android SDK/NDK + Android Rust targets | Android/mobile CI jobs |
 | `ghcr.io/liminal-hq/dev-rust` | `dev-rust` | Rust toolchain under the user home | Pure-Rust devcontainers and toolbox use |
@@ -29,7 +29,7 @@ ci-base (unpublished)          universal CLI: certs, curl, wget, git, gh, file,
 │                              build-essential, pkg-config, zip, unzip, jq
 ├── ci-rust                    + rustup (pinned) + clippy + rustfmt + cargo-nextest
 │   ├── ci-dos                 + rust-src, i586 + wasm32 targets, DJGPP, DOSBox
-│   │                            Staging, CWSDPMI, Bun, gcc-multilib, mtools,
+│   │                            Staging, CWSDPMI, Bun, QEMU, NASM, gcc-multilib, mtools,
 │   │                            dosfstools
 │   └── ci-desktop             + Node/pnpm/Bun + GTK/webkit stack + GStreamer/xvfb/
 │       │                        emoji fonts + tauri-cli

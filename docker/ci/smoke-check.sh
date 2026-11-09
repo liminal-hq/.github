@@ -42,11 +42,13 @@ case "${profile}" in
     ;;
   ci-dos)
     run_in_image '
-      command -v cargo rustup bun gh jq mtools mcopy mattrib mkfs.fat patch python3
+      command -v cargo rustup bun gh jq mtools mcopy mattrib mkfs.fat nasm patch python3 qemu-system-i386
       cargo --version
       bun --version
       gh --version
       jq --version
+      nasm --version
+      qemu-system-i386 --version
       [[ "$DOS_TOOLCHAIN" == /opt/dos-toolchain ]]
       djgpp="$DOS_TOOLCHAIN/djgpp/djgpp/bin"
       "$djgpp/i586-pc-msdosdjgpp-ar" --version

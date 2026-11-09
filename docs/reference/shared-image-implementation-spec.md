@@ -53,7 +53,7 @@ The shared Dockerfile builds two parallel tier chains. Each tier adds exactly on
   - adds pinned Node, pnpm, and Bun on `ci-base` (no Rust)
 - `ci-dos`
   - builds on `ci-rust`
-  - adds `rust-src` and the `i586-unknown-linux-gnu` and `wasm32-unknown-unknown` Rust targets, `gcc-multilib`, `mtools`, `dosfstools`, `patch`, `python3` and `libfl2`, and pinned Bun
+  - adds `rust-src` and the `i586-unknown-linux-gnu` and `wasm32-unknown-unknown` Rust targets, `gcc-multilib`, `mtools`, `dosfstools`, QEMU, NASM, `patch`, `python3` and `libfl2`, and pinned Bun
   - installs DJGPP, DOSBox Staging and CWSDPMI under `DOS_TOOLCHAIN` (`/opt/dos-toolchain`, with `djgpp/`, `dosbox/` and `cwsdpmi/` inside), each download checked against a SHA-256 pinned in the Dockerfile
 - `ci-desktop`
   - builds on `ci-rust`

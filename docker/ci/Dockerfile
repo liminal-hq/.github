@@ -99,7 +99,8 @@ RUN curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
 # headless) and CWSDPMI (the DOS extender that ships beside the programs) are installed under DOS_TOOLCHAIN with the layout
 # `djgpp/`, `dosbox/` and `cwsdpmi/`, and every download is checked against its pinned SHA-256. The Rust toolchain gains
 # rust-src (for -Zbuild-std with a custom target), the i586 Linux target (native 32-bit checks) and the wasm32 target.
-# gcc-multilib, mtools and dosfstools cover 32-bit native builds and floppy images; libfl2 is loaded by DJGPP's tools.
+# gcc-multilib, mtools and dosfstools cover 32-bit native builds and floppy images; QEMU and NASM support boot tests.
+# libfl2 is loaded by DJGPP's tools.
 # Bun uses the same pin as the web and desktop tiers. Single-platform: the DJGPP and DOSBox builds are x86-64 only.
 FROM ci-rust AS ci-dos
 
@@ -113,7 +114,7 @@ ARG CWSDPMI_URL
 ARG CWSDPMI_SHA256
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bzip2 dosfstools gcc-multilib libfl2 mtools patch python3 xz-utils \
+    bzip2 dosfstools gcc-multilib libfl2 mtools nasm patch python3 qemu-system-x86 xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 ENV DOS_TOOLCHAIN=/opt/dos-toolchain

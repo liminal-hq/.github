@@ -92,7 +92,7 @@ The publish workflow runs `docker/ci/smoke-check.sh <profile> <image>` against e
 
 1. Tool availability for the tier:
    - Rust tiers: `cargo`, `rustup`, `cargo-nextest`
-   - `ci-dos`: `bun`, `mcopy`, `mattrib`, `mkfs.fat`, `patch`, `python3`, the DJGPP `i586-pc-msdosdjgpp-gcc` and `-ar` under `DOS_TOOLCHAIN`, DOSBox Staging, `CWSDPMI.EXE`, `rust-src` and the i586 and wasm32 Rust targets, and a 32-bit native C build
+   - `ci-dos`: `bun`, `mcopy`, `mattrib`, `mkfs.fat`, `nasm`, `qemu-system-i386`, `patch`, `python3`, the DJGPP `i586-pc-msdosdjgpp-gcc` and `-ar` under `DOS_TOOLCHAIN`, DOSBox Staging, `CWSDPMI.EXE`, `rust-src` and the i586 and wasm32 Rust targets, and a 32-bit native C build
    - JS tiers: `node`, `pnpm`, `bun`
    - Tauri tiers: `cargo-tauri`
    - mobile tiers: `sdkmanager`, `java`
