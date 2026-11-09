@@ -28,3 +28,7 @@ Runs [`zizmor`](https://docs.zizmor.sh/) against this repo's workflows and uploa
 
 - **Trigger:** `pull_request` and push to `main`.
 - **Non-blocking today:** `continue-on-error: true` on the zizmor step. The existing workflows carry an untriaged backlog of findings (unpinned actions, template-injection-shaped `run:` steps, one overly broad `permissions:` block) — findings are visible in the Security tab, but don't fail the check yet. Remove `continue-on-error` once that backlog is worked through.
+
+## `test-windows-setup.yml`
+
+Checks the shared [Windows setup action](../actions/setup-windows/README.md) on native Windows x64 and ARM64 runners, including a Rust-only configuration.
