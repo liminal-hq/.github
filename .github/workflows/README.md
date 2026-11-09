@@ -5,6 +5,7 @@
 Builds and publishes the shared `tauri-ci-*`/`tauri-dev-*` container images consumer repos use for Tauri desktop and mobile CI/devcontainers.
 
 - **Triggers:** push to `main` (when `docker/ci/**` or this workflow changes), `workflow_dispatch`, and a weekly `schedule` gated to a two-week publish cadence.
+- **Concurrency:** publish runs are queued in a shared group so only one run updates image tags and build caches at a time.
 - **Docs:** [`../../docs/reference/shared-image-layout.md`](../../docs/reference/shared-image-layout.md), [`../../docs/reference/shared-image-implementation-spec.md`](../../docs/reference/shared-image-implementation-spec.md), [`../../docs/runbooks/image-publish-and-rollback.md`](../../docs/runbooks/image-publish-and-rollback.md)
 
 ## `package-arch-appimage.yml`

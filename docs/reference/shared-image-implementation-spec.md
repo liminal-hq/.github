@@ -84,7 +84,9 @@ The shared Dockerfile builds two parallel tier chains. Each tier adds exactly on
 
 ### JS runtime duplication
 
-The Node + pnpm + Bun install block appears in both the web tier and the Tauri desktop tier of each family. This is deliberate: single inheritance cannot give the desktop tier two parents, and every install site consumes the same shared `ARG` pins (`NODE_MAJOR`, `PNPM_VERSION`, `BUN_VERSION`), so versions cannot drift between tiers.
+The Node + pnpm + Bun install block appears in both the web tier and the Tauri desktop tier of each family. This is deliberate: single inheritance cannot give the desktop tier two parents, and every install site consumes the same shared `ARG` pins (`NODE_MAJOR`, `NODE_VERSION`, `PNPM_VERSION`, `BUN_VERSION`), so versions cannot drift between tiers. `NODE_MAJOR` selects the NodeSource repository and `NODE_VERSION` pins the exact package version.
+
+Mobile images provide Android platform 36, build-tools 37.0.0 and NDK 30.0.16248370. Build-tools 36.0.0 and NDK 28.2.13676358 are also installed for consumers that still select those versions explicitly.
 
 ## Environment Model
 
@@ -122,7 +124,7 @@ Dev images should pre-create writable user-owned directories for the tool paths 
 The image tiers stay aligned on:
 
 - Ubuntu baseline
-- Node major version
+- Node major and exact package version
 - pnpm version
 - Bun version
 - Rust toolchain version
@@ -149,6 +151,7 @@ The shared image publication workflow is responsible for:
 - Pushes to `main` that touch `docker/ci/**` or the workflow should publish.
 - Manual dispatch should publish.
 - Scheduled runs should follow the configured bi-weekly cadence gate.
+- Publish runs share a concurrency group and queue rather than running together, so they cannot race to update image tags and build caches. Up to 100 runs can wait in the queue.
 
 ### Tag policy
 
