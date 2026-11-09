@@ -151,6 +151,7 @@ The shared image publication workflow is responsible for:
 - Pushes to `main` that touch `docker/ci/**` or the workflow should publish.
 - Manual dispatch should publish.
 - Scheduled runs should follow the configured bi-weekly cadence gate.
+- Publish runs share a concurrency group and queue rather than running together, so they cannot race to update image tags and build caches. Up to 100 runs can wait in the queue.
 
 ### Tag policy
 
