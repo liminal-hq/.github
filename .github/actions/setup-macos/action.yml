@@ -81,7 +81,9 @@ runs:
       shell: bash
       env:
         SHARED_RUST_TOOLCHAIN: ${{ steps.versions.outputs.rust }}
-      run: printf 'RUSTUP_TOOLCHAIN=%s\n' "$SHARED_RUST_TOOLCHAIN" >> "$GITHUB_ENV"
+      run: | # zizmor: ignore[github-env] Only a numeric Rust version is written to the environment.
+        [[ "$SHARED_RUST_TOOLCHAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+        printf 'RUSTUP_TOOLCHAIN=%s\n' "$SHARED_RUST_TOOLCHAIN" >> "$GITHUB_ENV"
 
     - name: Cache Cargo dependencies and build outputs
       if: inputs.install-rust == 'true' && inputs.rust-cache == 'true'
