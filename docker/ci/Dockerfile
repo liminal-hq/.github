@@ -7,13 +7,14 @@ ARG UBUNTU_VERSION=24.04
 ARG DEVCONTAINER_BASE_IMAGE=mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG NODE_MAJOR=24
+ARG NODE_VERSION=24.22.2-1nodesource1
 ARG PNPM_VERSION=10.32.1
 ARG BUN_VERSION=1.3.14
 ARG RUST_TOOLCHAIN=1.98.0
-ARG ANDROID_CMDLINE_TOOLS=11076708
+ARG ANDROID_CMDLINE_TOOLS=15859902
 ARG ANDROID_PLATFORM=36
-ARG ANDROID_BUILD_TOOLS=36.0.0
-ARG ANDROID_NDK=28.2.13676358
+ARG ANDROID_BUILD_TOOLS=37.0.0
+ARG ANDROID_NDK=30.0.16248370
 ARG CARGO_XWIN_VERSION=0.23.1
 ARG DJGPP_URL=https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
 ARG DJGPP_SHA256=8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00
@@ -77,12 +78,13 @@ FROM ci-base AS ci-web
 
 ARG DEBIAN_FRONTEND
 ARG NODE_MAJOR
+ARG NODE_VERSION
 ARG PNPM_VERSION
 ARG BUN_VERSION
 
 # Node + pnpm baseline pinned for workspace consistency.
 RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
-    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && apt-get update && apt-get install -y --no-install-recommends "nodejs=${NODE_VERSION}" \
     && npm install -g "pnpm@${PNPM_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
@@ -143,6 +145,7 @@ FROM ci-rust AS ci-desktop
 
 ARG DEBIAN_FRONTEND
 ARG NODE_MAJOR
+ARG NODE_VERSION
 ARG PNPM_VERSION
 ARG BUN_VERSION
 
@@ -156,7 +159,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Node + pnpm baseline pinned for workspace consistency.
 RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
-    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && apt-get update && apt-get install -y --no-install-recommends "nodejs=${NODE_VERSION}" \
     && npm install -g "pnpm@${PNPM_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
@@ -208,7 +211,9 @@ RUN { yes || true; } | sdkmanager --licenses \
     && sdkmanager --channel=0 --install \
       "platform-tools" \
       "platforms;android-${ANDROID_PLATFORM}" \
+      "build-tools;36.0.0" \
       "build-tools;${ANDROID_BUILD_TOOLS}" \
+      "ndk;28.2.13676358" \
       "ndk;${ANDROID_NDK}" \
     && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android \
     && rm -rf "${ANDROID_HOME}/cmdline-tools/latest/.downloadIntermediates"
@@ -282,12 +287,13 @@ FROM dev-base AS dev-web
 
 ARG DEBIAN_FRONTEND
 ARG NODE_MAJOR
+ARG NODE_VERSION
 ARG PNPM_VERSION
 ARG BUN_VERSION
 
 # Node + pnpm baseline pinned for shared devcontainer usage.
 RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
-    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && apt-get update && apt-get install -y --no-install-recommends "nodejs=${NODE_VERSION}" \
     && npm install -g "pnpm@${PNPM_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
@@ -314,6 +320,7 @@ FROM dev-rust AS dev-desktop
 
 ARG DEBIAN_FRONTEND
 ARG NODE_MAJOR
+ARG NODE_VERSION
 ARG PNPM_VERSION
 ARG BUN_VERSION
 
@@ -330,7 +337,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Node + pnpm baseline pinned for shared devcontainer usage.
 RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
-    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && apt-get update && apt-get install -y --no-install-recommends "nodejs=${NODE_VERSION}" \
     && npm install -g "pnpm@${PNPM_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
@@ -394,7 +401,9 @@ RUN { yes || true; } | sdkmanager --licenses \
     && sdkmanager --channel=0 --install \
       "platform-tools" \
       "platforms;android-${ANDROID_PLATFORM}" \
+      "build-tools;36.0.0" \
       "build-tools;${ANDROID_BUILD_TOOLS}" \
+      "ndk;28.2.13676358" \
       "ndk;${ANDROID_NDK}" \
     && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android \
     && rm -rf "${ANDROID_HOME}/cmdline-tools/latest/.downloadIntermediates"
