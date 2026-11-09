@@ -1,0 +1,117 @@
+# Verifies shared macOS setup with universal builds of Jar and Lieutenant Fizz.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Test macOS setup
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/setup-macos/**'
+      - '.github/workflows/test-macos-setup.yml'
+      - 'docker/ci/Dockerfile'
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/setup-macos/**'
+      - '.github/workflows/test-macos-setup.yml'
+      - 'docker/ci/Dockerfile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test setup with ${{ matrix.project }}
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: Jar
+            repository: liminal-hq/jar
+            ref: 527c5c34f62a8467e133249615a19fe7ca45040e
+            extra-targets: ''
+            workspaces: consumer
+          - project: Lieutenant Fizz
+            repository: liminal-hq/lieutenant-fizz
+            ref: 94f354d529eeb43661a265456900df059aa7b2f5
+            extra-targets: wasm32-unknown-unknown
+            workspaces: |
+              consumer
+              consumer/apps/player/src-tauri
+    defaults:
+      run:
+        working-directory: consumer
+        shell: bash
+    steps:
+      - name: Check out shared setup
+        uses: actions/checkout@v6.0.3
+        with:
+          path: shared-setup
+          persist-credentials: false
+      - name: Check out consumer
+        uses: actions/checkout@v6.0.3
+        with:
+          repository: ${{ matrix.repository }}
+          ref: ${{ matrix.ref }}
+          path: consumer
+          persist-credentials: false
+      - name: Set up macOS tooling
+        id: setup
+        uses: ./shared-setup/.github/actions/setup-macos
+        with:
+          rust-extra-targets: ${{ matrix.extra-targets }}
+          rust-cache-workspaces: ${{ matrix.workspaces }}
+      - name: Verify the shared baseline and Apple targets
+        env:
+          SHARED_BUN: ${{ steps.setup.outputs.bun-version }}
+          SHARED_RUST: ${{ steps.setup.outputs.rust-toolchain }}
+        run: |
+          set -euo pipefail
+          [[ "$(bun --version)" == "$SHARED_BUN" ]]
+          [[ "$(rustc --version)" == "rustc $SHARED_RUST "* ]]
+          installed="$(rustup target list --installed)"
+          grep -qx aarch64-apple-darwin <<< "$installed"
+          grep -qx x86_64-apple-darwin <<< "$installed"
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+      - name: Build Jar universal DMG
+        if: matrix.project == 'Jar'
+        run: |
+          set -euo pipefail
+          bun run release:version:check
+          bun run tauri build --target universal-apple-darwin --bundles dmg
+          find target/universal-apple-darwin/release/bundle -name '*.dmg' -print | grep -q .
+      - name: Build Lieutenant Fizz universal DMG
+        if: matrix.project == 'Lieutenant Fizz'
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+        run: |
+          set -euo pipefail
+          rustup target list --installed | grep -qx wasm32-unknown-unknown
+          bun run build:wasm
+          bun run build:app
+          bun run tauri build --target universal-apple-darwin --bundles dmg
+          find apps/player/src-tauri/target/universal-apple-darwin/release/bundle -name '*.dmg' -print | grep -q .
+
+  bun-only:
+    name: Test Bun-only setup
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          persist-credentials: false
+      - name: Set up Bun
+        id: setup
+        uses: ./.github/actions/setup-macos
+        with:
+          install-rust: 'false'
+      - name: Verify Bun
+        shell: bash
+        env:
+          SHARED_BUN: ${{ steps.setup.outputs.bun-version }}
+        run: test "$(bun --version)" = "$SHARED_BUN"
