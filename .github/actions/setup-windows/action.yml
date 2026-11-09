@@ -1,0 +1,72 @@
+# Sets up Rust, optional Bun, and Cargo caching on native Windows runners.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Set up Windows tooling
+description: Set up Rust, optional Bun, and Cargo caching on native Windows runners.
+
+inputs:
+  rust-toolchain:
+    description: Rust toolchain to install, such as stable or a specific version.
+    required: false
+    default: stable
+  rust-targets:
+    description: Comma-separated Rust targets to install in addition to the host target.
+    required: false
+    default: ''
+  rust-components:
+    description: Comma-separated Rust components to install.
+    required: false
+    default: ''
+  bun-version:
+    description: Bun version to install; leave empty to skip Bun.
+    required: false
+    default: ''
+  rust-cache:
+    description: Set to false to skip Cargo caching.
+    required: false
+    default: 'true'
+  rust-cache-workspaces:
+    description: Cargo workspace and target directory mappings passed to the Rust cache action.
+    required: false
+    default: ''
+
+outputs:
+  bun-version:
+    description: Installed Bun version, or empty when Bun is skipped.
+    value: ${{ steps.bun.outputs.bun-version }}
+  rust-toolchain:
+    description: Rustup name of the installed toolchain.
+    value: ${{ steps.rust.outputs.name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check runner platform
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        echo '::error::This action requires a native Windows runner.'
+        exit 1
+
+    - name: Set up Bun
+      id: bun
+      if: inputs.bun-version != ''
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: Set up Rust
+      id: rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        targets: ${{ inputs.rust-targets }}
+        components: ${{ inputs.rust-components }}
+
+    - name: Cache Cargo dependencies and build outputs
+      if: inputs.rust-cache == 'true'
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: ${{ inputs.rust-cache-workspaces }}

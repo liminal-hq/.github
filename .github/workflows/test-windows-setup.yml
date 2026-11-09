@@ -1,0 +1,80 @@
+# Verifies the shared Windows setup action on native x64 and ARM64 runners.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Test Windows setup
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/setup-windows/**'
+      - '.github/workflows/test-windows-setup.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/setup-windows/**'
+      - '.github/workflows/test-windows-setup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test setup (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+            bun: '1.4.4'
+            cache: 'true'
+          - runner: windows-11-arm
+            arch: arm64
+            bun: '1.4.4'
+            cache: 'true'
+          - runner: windows-latest
+            arch: x64-rust-only
+            bun: ''
+            cache: 'false'
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          persist-credentials: false
+      - name: Create a Cargo workspace
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force smoke/src | Out-Null
+          @'
+          [package]
+          name = "windows-setup-smoke"
+          version = "0.1.0"
+          edition = "2021"
+          '@ | Set-Content smoke/Cargo.toml
+          'fn main() { println!("ok"); }' | Set-Content smoke/src/main.rs
+      - name: Set up Windows tooling
+        id: setup
+        uses: ./.github/actions/setup-windows
+        with:
+          rust-toolchain: stable
+          rust-components: rustfmt
+          bun-version: ${{ matrix.bun }}
+          rust-cache: ${{ matrix.cache }}
+          rust-cache-workspaces: smoke -> target
+      - name: Verify the tools
+        shell: pwsh
+        env:
+          BUN_VERSION: ${{ steps.setup.outputs.bun-version }}
+          EXPECTED_BUN_VERSION: ${{ matrix.bun }}
+          RUST_TOOLCHAIN_NAME: ${{ steps.setup.outputs.rust-toolchain }}
+        run: |
+          if ($env:BUN_VERSION -ne $env:EXPECTED_BUN_VERSION) { throw 'Unexpected Bun output' }
+          if ($env:EXPECTED_BUN_VERSION -and (bun --version) -ne $env:EXPECTED_BUN_VERSION) { throw 'Unexpected Bun version' }
+          if (-not $env:RUST_TOOLCHAIN_NAME) { throw 'Missing Rust toolchain output' }
+          rustup component list --installed | Select-String '^rustfmt' | Out-Null
+          if (-not $?) { throw 'rustfmt is not installed' }
+          cargo check --manifest-path smoke/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
