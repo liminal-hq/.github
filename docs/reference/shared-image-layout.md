@@ -11,14 +11,14 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 
 | Image | Docker target | Tier contents | Primary consumers |
 | --- | --- | --- | --- |
-| `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Rust toolchain (pinned), clippy, rustfmt, cargo-nextest, gh | Pure-Rust libraries, CLIs, and TUIs |
+| `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Rust toolchain (pinned), clippy, rustfmt, cargo-nextest, cargo-deny, gh | Pure-Rust libraries, CLIs, and TUIs |
 | `ghcr.io/liminal-hq/ci-web` | `ci-web` | Node, pnpm, Bun (pinned), gh | JS/TS-only projects |
 | `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | ci-rust + rust-src, i586 and wasm32 targets + DJGPP/DOSBox Staging/CWSDPMI + Bun + QEMU/NASM + gcc-multilib/mtools/dosfstools | Building and testing MS-DOS programs in Rust and C |
-| `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | ci-rust + Node/pnpm/Bun + GTK/webkit2gtk system stack + GStreamer/xvfb/emoji fonts + tauri-cli | Tauri desktop CI jobs |
+| `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | ci-rust + Node/pnpm/Bun + GTK/webkit2gtk system stack + GStreamer/xvfb/emoji fonts + wasm32 target + wasm-bindgen CLI + tauri-cli | Tauri desktop CI jobs, including Rust + WASM front ends |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | ci-desktop + Java 17 + Android SDK/NDK + Android Rust targets | Android/mobile CI jobs |
-| `ghcr.io/liminal-hq/dev-rust` | `dev-rust` | Rust toolchain under the user home | Pure-Rust devcontainers and toolbox use |
+| `ghcr.io/liminal-hq/dev-rust` | `dev-rust` | Rust toolchain under the user home, clippy, rustfmt, cargo-nextest, cargo-deny | Pure-Rust devcontainers and toolbox use |
 | `ghcr.io/liminal-hq/dev-web` | `dev-web` | Node/pnpm/Bun with user-home tool paths | JS/TS devcontainers and toolbox use |
-| `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | dev-rust + JS runtimes + GUI stack + X11 inspection tools + tauri-cli | Desktop devcontainers |
+| `ghcr.io/liminal-hq/tauri-dev-desktop` | `dev-desktop` | dev-rust + JS runtimes + GUI stack + X11 inspection tools + wasm32 target + wasm-bindgen CLI + tauri-cli | Desktop devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-mobile` | `dev-mobile` | dev-desktop + Java 17 + Android SDK/NDK | Android/mobile devcontainers |
 | `ghcr.io/liminal-hq/tauri-dev-windows` | `dev-windows` | dev-desktop + clang/lld/llvm + NSIS + cargo-xwin + Windows MSVC Rust targets | Cross-compiling Windows builds from Linux or WSL2 |
 
@@ -27,20 +27,23 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 ```text
 ci-base (unpublished)          universal CLI: certs, curl, wget, git, gh, file,
 │                              build-essential, pkg-config, zip, unzip, jq
-├── ci-rust                    + rustup (pinned) + clippy + rustfmt + cargo-nextest
+├── ci-rust                    + rustup (pinned) + clippy + rustfmt + cargo-nextest +
+│   │                            cargo-deny
 │   ├── ci-dos                 + rust-src, i586 + wasm32 targets, DJGPP, DOSBox
 │   │                            Staging, CWSDPMI, Bun, QEMU, NASM, gcc-multilib, mtools,
 │   │                            dosfstools
 │   └── ci-desktop             + Node/pnpm/Bun + GTK/webkit stack + GStreamer/xvfb/
-│       │                        emoji fonts + tauri-cli
+│       │                        emoji fonts + wasm32 target +
+│       │                        wasm-bindgen CLI + tauri-cli
 │       └── ci-mobile          + Java 17 + Android SDK/NDK + Android Rust targets
 └── ci-web                     + Node/pnpm/Bun
 
 dev-base (unpublished)         devcontainers base + universal CLI + vim/ripgrep/fd/jq
-├── dev-rust                   + rustup (pinned) + clippy + rustfmt + cargo-nextest
+├── dev-rust                   + rustup (pinned) + clippy + rustfmt + cargo-nextest +
+│   │                            cargo-deny
 │   └── dev-desktop            + Node/pnpm/Bun + GUI stack + GStreamer/xvfb/fonts +
 │       │                        X11 inspection tools (xprop/xev/wmctrl/xdotool) +
-│       │                        tauri-cli
+│       │                        wasm32 target + wasm-bindgen CLI + tauri-cli
 │       ├── dev-mobile         + Java 17 + Android SDK/NDK under $HOME
 │       └── dev-windows        + clang/lld/llvm + NSIS + cargo-xwin + Windows MSVC
 │                                targets (no Microsoft SDK baked in)
@@ -124,7 +127,7 @@ Both JS runtimes (pnpm via Node, plus Bun) ship in every image tier that carries
 
 Every published image is smoke-validated by `docker/ci/smoke-check.sh` (invoked by the publish workflow before push) for:
 
-- tier tool availability (e.g. `cargo`/`rustup`/`cargo-nextest` on Rust tiers, `node`/`pnpm`/`bun` on JS tiers, `cargo-tauri` on Tauri tiers, `gh`/`jq` everywhere)
+- tier tool availability (e.g. `cargo`/`rustup`/`cargo-nextest`/`cargo-deny` on Rust tiers, the `wasm32-unknown-unknown` target and the pinned `wasm-bindgen` on the desktop tiers, `node`/`pnpm`/`bun` on JS tiers, `cargo-tauri` on Tauri tiers, `gh`/`jq` everywhere)
 - tier leanness on the lean CI tiers (`ci-rust` must not contain Node or Bun; `ci-web` must not contain cargo)
 - Android tooling on mobile images
 - writable user-home paths on dev images
@@ -135,6 +138,18 @@ Every published image is smoke-validated by `docker/ci/smoke-check.sh` (invoked 
 `gh` installation is part of the shared image contract, but authentication is still environment-driven. GitHub Actions jobs should pass `GH_TOKEN` or `GITHUB_TOKEN` when invoking the CLI inside the container.
 
 Smoke validation builds a single local runner-compatible image variant for fast checks. Multi-platform publication happens only in the final publish step.
+
+## Rust + WASM front ends (desktop tiers)
+
+`tauri-ci-desktop` and `tauri-dev-desktop` carry the `wasm32-unknown-unknown` Rust target and the `wasm-bindgen` CLI, so a Tauri app whose front end is a Rust crate compiled to WebAssembly builds without per-job setup. `ci-dos` already had the target; the lean `ci-rust`/`dev-rust` tiers and the web tiers do not.
+
+The CLI is pinned by `WASM_BINDGEN_VERSION` at the top of the Dockerfile and built from source with `cargo install --locked`. `wasm-bindgen` requires the CLI to match the `wasm-bindgen` crate version in the consumer's `Cargo.lock` exactly, so the pin is only a default: a consumer locked to another version installs its own over it before building.
+
+```sh
+cargo install wasm-bindgen-cli --version "$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')" --locked
+```
+
+`cargo-deny` is on every Rust tier (and so on the tiers built on them), for licence, advisory and source checks with `cargo deny check`.
 
 ## Cross-Compiling for Windows (`tauri-dev-windows`)
 

@@ -7,7 +7,12 @@
    - `publish-images` matrix: CI mobile, dev Rust, dev web, dev desktop, dev mobile, dev Windows
    - `build-multiarch` + `merge-multiarch`: CI Rust, CI web, CI desktop (per-platform native builds merged into one manifest)
 3. Record published digest and tags from the step summaries.
-4. First publish of a NEW image only: GHCR creates new packages with private visibility. Set the package to public (org settings → Packages → the new package → Change visibility) and connect it to this repository, or cross-org consumers (e.g. `ScottMorris/*` repos) cannot pull it and `GITHUB_TOKEN`-based pulls outside the org will fail.
+4. After the publish is checked, promote it by updating the digests in `docs/reference/recommended-image-pins.md`.
+5. First publish of a NEW image only: GHCR creates new packages with private visibility. Set the package to public (org settings → Packages → the new package → Change visibility) and connect it to this repository, or cross-org consumers (e.g. `ScottMorris/*` repos) cannot pull it and `GITHUB_TOKEN`-based pulls outside the org will fail.
+
+### Build time and image size
+
+`cargo-nextest`, `cargo-deny` and `wasm-bindgen-cli` are compiled from source with `cargo install --locked`, which adds several minutes to the Rust tiers' builds and some tens of megabytes to the images. The arm64 variants of `ci-rust` and `tauri-ci-desktop` build natively on `ubuntu-24.04-arm`, so these installs compile there too without emulation; do not move them to QEMU builds. A change to `docker/ci/**` on `main` starts a publish automatically, so merging an image change publishes it.
 
 ## Image Families
 
@@ -91,7 +96,8 @@ Only the manifest digest (`sha256:...`) is immutable. Every tag above is mutable
 The publish workflow runs `docker/ci/smoke-check.sh <profile> <image>` against every image before pushing; the same script can be run locally against a candidate image. Before promoting a new image to broad usage, validate:
 
 1. Tool availability for the tier:
-   - Rust tiers: `cargo`, `rustup`, `cargo-nextest`
+   - Rust tiers: `cargo`, `rustup`, `cargo-nextest`, `cargo-deny`
+   - desktop tiers: the `wasm32-unknown-unknown` Rust target and `wasm-bindgen` at the `WASM_BINDGEN_VERSION` pin
    - `ci-dos`: `bun`, `mcopy`, `mattrib`, `mkfs.fat`, `nasm`, `qemu-system-i386`, `patch`, `python3`, the DJGPP `i586-pc-msdosdjgpp-gcc` and `-ar` under `DOS_TOOLCHAIN`, DOSBox Staging, `CWSDPMI.EXE`, `rust-src` and the i586 and wasm32 Rust targets, and a 32-bit native C build
    - JS tiers: `node`, `pnpm`, `bun`
    - Tauri tiers: `cargo-tauri`

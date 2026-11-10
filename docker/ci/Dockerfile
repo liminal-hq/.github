@@ -16,6 +16,11 @@ ARG ANDROID_PLATFORM=36
 ARG ANDROID_BUILD_TOOLS=37.0.0
 ARG ANDROID_NDK=30.0.16248370
 ARG CARGO_XWIN_VERSION=0.23.1
+# The wasm-bindgen CLI must match the `wasm-bindgen` crate version in each
+# consumer's Cargo.lock. This pin is the default for repos that track it; a repo
+# on another version installs its own CLI (`cargo install wasm-bindgen-cli
+# --version <locked> --locked`) over this one.
+ARG WASM_BINDGEN_VERSION=0.2.125
 ARG DJGPP_URL=https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
 ARG DJGPP_SHA256=8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00
 ARG DOSBOX_URL=https://github.com/dosbox-staging/dosbox-staging/releases/download/v0.83.0/dosbox-staging-linux-x86_64-v0.83.0.tar.xz
@@ -68,7 +73,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --default-toolchain "${RUST_TOOLCHAIN}" --no-modify-path \
     && rustup component add clippy rustfmt \
-    && cargo install cargo-nextest --locked
+    && cargo install cargo-nextest cargo-deny --locked
 
 # CI web tier: pinned Node, pnpm, and Bun on the universal base.
 # Published as ghcr.io/liminal-hq/ci-web for JS/TS-only consumers.
@@ -149,6 +154,7 @@ ARG NODE_MAJOR
 ARG NODE_VERSION
 ARG PNPM_VERSION
 ARG BUN_VERSION
+ARG WASM_BINDGEN_VERSION
 
 # Tauri desktop system dependencies, kept at this tier so lean images stay lean.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -169,6 +175,11 @@ ENV BUN_INSTALL=/usr/local/bun \
     PATH=/usr/local/bun/bin:${PATH}
 
 RUN curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
+
+# Rust + WASM front ends (for example a Tauri app whose UI is a wasm-bindgen
+# crate): the wasm32 target and the wasm-bindgen CLI, built from source.
+RUN rustup target add wasm32-unknown-unknown \
+    && cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}" --locked
 
 # Keep parity with existing app repos for portable AppImage behaviour.
 RUN cargo install tauri-cli \
@@ -279,7 +290,7 @@ USER vscode
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --default-toolchain "${RUST_TOOLCHAIN}" --no-modify-path \
     && rustup component add clippy rustfmt \
-    && cargo install cargo-nextest --locked
+    && cargo install cargo-nextest cargo-deny --locked
 
 # Dev web tier: pinned Node, pnpm, and Bun with user-home tool paths.
 # Published as ghcr.io/liminal-hq/dev-web for JS/TS devcontainers and
@@ -324,6 +335,7 @@ ARG NODE_MAJOR
 ARG NODE_VERSION
 ARG PNPM_VERSION
 ARG BUN_VERSION
+ARG WASM_BINDGEN_VERSION
 
 USER root
 
@@ -355,6 +367,11 @@ USER vscode
 
 # Bun pinned under the devcontainer user home.
 RUN curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
+
+# Rust + WASM front ends: the wasm32 target and the wasm-bindgen CLI, matching
+# the CI desktop tier.
+RUN rustup target add wasm32-unknown-unknown \
+    && cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}" --locked
 
 # Keep parity with existing app repos for portable AppImage behaviour.
 RUN cargo install tauri-cli \

@@ -4,6 +4,11 @@ The digest to pin each shared image to today. Consumers should reference an imag
 
 Update this table in the same change whenever a publish is promoted as the new recommended build.
 
+## Updating the Pins
+
+1. Publish the new images (see `docs/runbooks/image-publish-and-rollback.md`) and read each image's digest from the `Digest` line in the workflow's step summary.
+2. After the publish is checked and promoted as the recommended build, update the table below with the new digests, the tool versions in the notes, the `Last updated` date and the fallback publish, in one change. Never enter a digest that was not read from a completed publish.
+
 ## Current Pins
 
 Last updated: 2026-11-09. All images are from the `20261109-c22e7c8` publish. The preceding `20261109-5cb26d7` publish remains available as a fallback.
