@@ -12,17 +12,23 @@ set -euo pipefail
 profile="${1:?usage: smoke-check.sh <profile> <image-ref>}"
 image="${2:?usage: smoke-check.sh <profile> <image-ref>}"
 
+# The wasm-bindgen pin comes from the Dockerfile, the single place it is set, and
+# is handed to the container so the check compares against the real pin.
+wasm_bindgen_version="$(sed -n 's/^ARG WASM_BINDGEN_VERSION=//p' "$(dirname "${BASH_SOURCE[0]}")/Dockerfile")"
+[[ -n "${wasm_bindgen_version}" ]] || { echo "WASM_BINDGEN_VERSION pin not found in Dockerfile" >&2; exit 1; }
+
 run_in_image() {
-  docker run --rm "${image}" bash -lc "set -euo pipefail; $1"
+  docker run --rm -e "WASM_BINDGEN_VERSION=${wasm_bindgen_version}" "${image}" bash -lc "set -euo pipefail; $1"
 }
 
 case "${profile}" in
   ci-rust)
     run_in_image '
-      command -v cargo rustup cargo-nextest gh jq
+      command -v cargo rustup cargo-nextest cargo-deny gh jq
       cargo --version
       rustup --version
       cargo nextest --version
+      cargo deny --version
       gh --version
       jq --version
       ! command -v node
@@ -64,13 +70,16 @@ case "${profile}" in
     ;;
   ci-desktop)
     run_in_image '
-      command -v cargo rustup node pnpm bun cargo-tauri gh jq
+      command -v cargo rustup node pnpm bun cargo-tauri cargo-deny wasm-bindgen gh jq
       cargo --version
+      cargo deny --version
       node --version
       pnpm --version
       bun --version
       gh --version
       jq --version
+      rustup target list --installed | grep -qx wasm32-unknown-unknown
+      wasm-bindgen --version | grep -Fx "wasm-bindgen ${WASM_BINDGEN_VERSION}"
     '
     ;;
   ci-mobile)
@@ -88,8 +97,9 @@ case "${profile}" in
   dev-rust)
     run_in_image '
       [[ "$(id -u)" != "0" ]]
-      command -v cargo rustup cargo-nextest gh rg fd jq
+      command -v cargo rustup cargo-nextest cargo-deny gh rg fd jq
       cargo --version
+      cargo deny --version
       gh --version
       [[ "$CARGO_HOME" == "$HOME/.cargo" ]]
       [[ "$RUSTUP_HOME" == "$HOME/.rustup" ]]
@@ -116,8 +126,11 @@ case "${profile}" in
   dev-desktop)
     run_in_image '
       [[ "$(id -u)" != "0" ]]
-      command -v cargo rustup node pnpm bun cargo-tauri gh rg fd jq
+      command -v cargo rustup node pnpm bun cargo-tauri cargo-deny wasm-bindgen gh rg fd jq
       cargo --version
+      cargo deny --version
+      rustup target list --installed | grep -qx wasm32-unknown-unknown
+      wasm-bindgen --version | grep -Fx "wasm-bindgen ${WASM_BINDGEN_VERSION}"
       node --version
       pnpm --version
       bun --version

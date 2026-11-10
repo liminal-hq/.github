@@ -15,10 +15,10 @@ This repository is the shared home for Liminal HQ CI infrastructure, container i
 
 Pick the leanest tier that covers the repo's toolchain:
 
-- `ghcr.io/liminal-hq/ci-rust` — Rust toolchain + clippy/rustfmt/cargo-nextest (pure-Rust CI)
+- `ghcr.io/liminal-hq/ci-rust` — Rust toolchain + clippy/rustfmt/cargo-nextest/cargo-deny (pure-Rust CI)
 - `ghcr.io/liminal-hq/ci-web` — Node + pnpm + Bun (JS/TS-only CI)
 - `ghcr.io/liminal-hq/ci-dos` — Rust + DJGPP, DOSBox Staging, CWSDPMI, Bun, QEMU, NASM and 32-bit and disk-image tools (building and testing MS-DOS programs in Rust and C)
-- `ghcr.io/liminal-hq/tauri-ci-desktop` — Rust + JS runtimes + Tauri desktop system stack
+- `ghcr.io/liminal-hq/tauri-ci-desktop` — Rust + JS runtimes + Tauri desktop system stack + the wasm32 target and `wasm-bindgen` CLI (for Rust + WASM front ends)
 - `ghcr.io/liminal-hq/tauri-ci-mobile` — desktop stack + Java + Android SDK/NDK
 - `ghcr.io/liminal-hq/dev-rust` — Rust toolchain for devcontainers/toolbox use
 - `ghcr.io/liminal-hq/dev-web` — JS runtimes for devcontainers/toolbox use
