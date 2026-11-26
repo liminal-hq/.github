@@ -13,6 +13,7 @@ Each tier adds exactly one concern on top of its parent, so consumer repos pick 
 | --- | --- | --- | --- |
 | `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Rust toolchain (pinned), clippy, rustfmt, cargo-nextest, cargo-deny, gh | Pure-Rust libraries, CLIs, and TUIs |
 | `ghcr.io/liminal-hq/ci-web` | `ci-web` | Node, pnpm, Bun (pinned), gh | JS/TS-only projects |
+| `ghcr.io/liminal-hq/ci-art` | `ci-art` | librsvg (`rsvg-convert`), ImageMagick 6 (`convert`; no `magick`), xmllint, shellcheck, python3 + numpy + Pillow, DejaVu and Liberation fonts, gh | Rendering and checking SVG artwork; no browser |
 | `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | ci-rust + rust-src, i586 and wasm32 targets + DJGPP/DOSBox Staging/CWSDPMI + Bun + QEMU/NASM + gcc-multilib/mtools/dosfstools | Building and testing MS-DOS programs in Rust and C |
 | `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | ci-rust + Node/pnpm/Bun + GTK/webkit2gtk system stack + GStreamer/xvfb/emoji fonts + wasm32 target + wasm-bindgen CLI + tauri-cli | Tauri desktop CI jobs, including Rust + WASM front ends |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | ci-desktop + Java 17 + Android SDK/NDK + Android Rust targets | Android/mobile CI jobs |
@@ -36,6 +37,8 @@ ci-base (unpublished)          universal CLI: certs, curl, wget, git, gh, file,
 │       │                        emoji fonts + wasm32 target +
 │       │                        wasm-bindgen CLI + tauri-cli
 │       └── ci-mobile          + Java 17 + Android SDK/NDK + Android Rust targets
+├── ci-art                     + librsvg, ImageMagick 6, xmllint, shellcheck, python3 +
+│                                numpy + Pillow, DejaVu + Liberation fonts
 └── ci-web                     + Node/pnpm/Bun
 
 dev-base (unpublished)         devcontainers base + universal CLI + vim/ripgrep/fd/jq
@@ -59,6 +62,7 @@ The JS runtime install block (Node + pnpm + Bun) intentionally appears in both t
 | `ci-rust` | `linux/amd64`, `linux/arm64` | Multi-arch because Rust release jobs already run on both x64 and ARM runners. |
 | `ci-web` | `linux/amd64`, `linux/arm64` | Multi-arch for ARM binary-compile jobs (e.g. Bun `--target` builds on `ubuntu-24.04-arm`). |
 | `tauri-ci-desktop` | `linux/amd64`, `linux/arm64` | Multi-arch because downstream Linux desktop release jobs already run on both x64 and ARM runners. |
+| `ci-art` | `linux/amd64` | Single-platform for now; every package is in the Ubuntu archive for arm64 too, so multi-arch is a matrix change if an ARM job needs it. |
 | `ci-dos` | `linux/amd64` | DJGPP's Linux build and DOSBox Staging's release are x86-64 only. |
 | `tauri-ci-mobile` | `linux/amd64` | ARM is not part of the current shared mobile CI contract. |
 | `dev-rust` | `linux/amd64` | Dev-family ARM support is a possible follow-up, not a current baseline. |
@@ -89,6 +93,7 @@ Consumers that need Linux ARM should use the multi-arch CI images and should not
 
 1. Pure Rust (libraries, CLIs, TUIs): `ci-rust` / `dev-rust`
 2. JS/TS only (sites, CLIs, Bun-compiled binaries): `ci-web` / `dev-web`
+   - Rendering and checking SVG artwork (banners, icons, rasters), with no browser: `ci-art`
 3. Tauri desktop (with either pnpm or Bun): `tauri-ci-desktop` / `tauri-dev-desktop`
 4. Tauri Android/mobile: `tauri-ci-mobile` / `tauri-dev-mobile`
 5. Windows builds cross-compiled from Linux or WSL2: `tauri-dev-windows` (there is no CI counterpart; it is not meant for Windows runners)

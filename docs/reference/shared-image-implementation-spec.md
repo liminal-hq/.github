@@ -17,6 +17,7 @@ Published image set:
 | --- | --- | --- |
 | `ghcr.io/liminal-hq/ci-rust` | `ci-rust` | Pure-Rust CI jobs |
 | `ghcr.io/liminal-hq/ci-web` | `ci-web` | JS/TS-only CI jobs |
+| `ghcr.io/liminal-hq/ci-art` | `ci-art` | CI jobs that render and check SVG artwork |
 | `ghcr.io/liminal-hq/ci-dos` | `ci-dos` | CI jobs that build MS-DOS programs in Rust and C |
 | `ghcr.io/liminal-hq/tauri-ci-desktop` | `ci-desktop` | Tauri desktop CI jobs |
 | `ghcr.io/liminal-hq/tauri-ci-mobile` | `ci-mobile` | Android/mobile CI jobs |
@@ -51,6 +52,10 @@ The shared Dockerfile builds two parallel tier chains. Each tier adds exactly on
   - root-friendly tool paths under `/usr/local`
 - `ci-web`
   - adds pinned Node, pnpm, and Bun on `ci-base` (no Rust)
+- `ci-art`
+  - builds on `ci-base` (no Rust, no JS)
+  - adds `librsvg2-bin`, `imagemagick` (6.9 on Ubuntu 24.04: `convert`, no `magick`), `libxml2-utils`, `shellcheck`, `python3` with `python3-numpy` and `python3-pil`, and the DejaVu and Liberation fonts, all from the Ubuntu archive and pinned by the image digest
+  - carries no browser: Ubuntu packages Chromium as a snap, so jobs that drive a headless browser stay on the hosted runner
 - `ci-dos`
   - builds on `ci-rust`
   - adds `rust-src` and the `i586-unknown-linux-gnu` and `wasm32-unknown-unknown` Rust targets, `gcc-multilib`, `mtools`, `dosfstools`, QEMU, NASM, `patch`, `python3` and `libfl2`, and pinned Bun
@@ -171,6 +176,7 @@ Tags are mutable; the manifest digest is the only immutable reference. Consumers
 | `ci-rust` | `linux/amd64`, `linux/arm64` |
 | `ci-web` | `linux/amd64`, `linux/arm64` |
 | `tauri-ci-desktop` | `linux/amd64`, `linux/arm64` |
+| `ci-art` | `linux/amd64` |
 | `ci-dos` | `linux/amd64` |
 | `tauri-ci-mobile` | `linux/amd64` |
 | `dev-rust` | `linux/amd64` |
@@ -246,6 +252,7 @@ Pick the leanest tier that covers the repo's toolchain:
 
 - Pure Rust: `ci-rust` / `dev-rust`
 - JS/TS only: `ci-web` / `dev-web`
+- Rendering and checking SVG artwork, no browser: `ci-art`
 - MS-DOS programs in Rust and C: `ci-dos`
 - Tauri desktop (pnpm or Bun): `tauri-ci-desktop` / `tauri-dev-desktop`
 - Tauri Android/mobile: `tauri-ci-mobile` / `tauri-dev-mobile`
