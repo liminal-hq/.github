@@ -46,6 +46,24 @@ case "${profile}" in
       ! command -v cargo
     '
     ;;
+  ci-art)
+    run_in_image '
+      command -v rsvg-convert convert identify xmllint shellcheck python3 gh jq
+      rsvg-convert --version
+      convert -version | grep -q "ImageMagick 6\."
+      xmllint --version
+      shellcheck --version
+      python3 -I -c "import numpy, PIL; print(numpy.__version__, PIL.__version__)"
+      fc-list | grep -q "DejaVuSans.ttf"
+      fc-list | grep -q "LiberationSans-Regular.ttf"
+      gh --version
+      jq --version
+      ! command -v magick
+      ! command -v cargo
+      ! command -v node
+      ! command -v bun
+    '
+    ;;
   ci-dos)
     run_in_image '
       command -v cargo rustup bun gh jq mtools mcopy mattrib mkfs.fat nasm patch python3 qemu-system-i386

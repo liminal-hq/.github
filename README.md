@@ -17,6 +17,7 @@ Pick the leanest tier that covers the repo's toolchain:
 
 - `ghcr.io/liminal-hq/ci-rust` — Rust toolchain + clippy/rustfmt/cargo-nextest/cargo-deny (pure-Rust CI)
 - `ghcr.io/liminal-hq/ci-web` — Node + pnpm + Bun (JS/TS-only CI)
+- `ghcr.io/liminal-hq/ci-art` — librsvg, ImageMagick 6, xmllint, shellcheck, python3 with numpy and Pillow, and DejaVu and Liberation fonts (rendering and checking SVG artwork)
 - `ghcr.io/liminal-hq/ci-dos` — Rust + DJGPP, DOSBox Staging, CWSDPMI, Bun, QEMU, NASM and 32-bit and disk-image tools (building and testing MS-DOS programs in Rust and C)
 - `ghcr.io/liminal-hq/tauri-ci-desktop` — Rust + JS runtimes + Tauri desktop system stack + the wasm32 target and `wasm-bindgen` CLI (for Rust + WASM front ends)
 - `ghcr.io/liminal-hq/tauri-ci-mobile` — desktop stack + Java + Android SDK/NDK
@@ -29,7 +30,7 @@ Pick the leanest tier that covers the repo's toolchain:
 ## Platform Support
 
 - `ci-rust`, `ci-web`, and `tauri-ci-desktop` publish `linux/amd64` and `linux/arm64`.
-- `ci-dos` and `tauri-ci-mobile` currently publish `linux/amd64` only (the DJGPP and DOSBox Staging builds are x86-64 only).
+- `ci-dos` and `tauri-ci-mobile` currently publish `linux/amd64` only (the DJGPP and DOSBox Staging builds are x86-64 only); `ci-art` publishes `linux/amd64` only as well.
 - Dev images (`dev-rust`, `dev-web`, `tauri-dev-desktop`, `tauri-dev-mobile`, `tauri-dev-windows`) currently publish `linux/amd64` only.
 
 The ARM variants exist today to support downstream Linux ARM runners such as `ubuntu-24.04-arm` release and binary-compile jobs.
@@ -56,6 +57,7 @@ The ARM variants exist today to support downstream Linux ARM runners such as `ub
 - Docker targets:
   - `ci-rust`
   - `ci-web`
+  - `ci-art`
   - `ci-dos`
   - `ci-desktop`
   - `ci-mobile`

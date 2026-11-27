@@ -33,7 +33,7 @@ ARG CWSDPMI_SHA256=deacda0488e1cdd7c4a9f32fab45662b34c0ed6b2d7d4d13bc07041b62004
 # so lean tiers (ci-rust, ci-web) never inherit them.
 FROM ubuntu:${UBUNTU_VERSION} AS ci-base
 
-# Applies to this stage and every descendant (ci-rust, ci-web, ci-desktop,
+# Applies to this stage and every descendant (ci-rust, ci-web, ci-art, ci-desktop,
 # ci-mobile): without pipefail, a failed download on the left of a `curl |
 # bash`-style install can silently succeed since the pipe's exit code comes
 # from the right-hand command.
@@ -98,6 +98,22 @@ ENV BUN_INSTALL=/usr/local/bun \
     PATH=/usr/local/bun/bin:${PATH}
 
 RUN curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"
+
+# CI art tier: the tools that render and check SVG artwork, on the universal base.
+# Published as ghcr.io/liminal-hq/ci-art for jobs that rasterise banners, icons and screenshots without a toolchain.
+# librsvg2-bin (`rsvg-convert`), ImageMagick, python3 with numpy and Pillow, libxml2-utils (`xmllint`) and shellcheck come from
+# the Ubuntu archive, so they follow the base release and stay pinned by the image digest. Ubuntu 24.04 ships ImageMagick 6.9
+# (`convert`, `identify`, `mogrify`, `compare`), not ImageMagick 7: there is no `magick` command. Consumers that need
+# ImageMagick 7 keep installing their own pinned build over it, and likewise a job that needs newer numpy or Pillow than the
+# archive's (1.26 and 10.2 on 24.04) installs its own pins with pip. DejaVu and Liberation give SVG text metrics the same fonts
+# everywhere. No browser is installed: Ubuntu's Chromium is a snap, which does not run in a container.
+FROM ci-base AS ci-art
+
+ARG DEBIAN_FRONTEND
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-dejavu-core fonts-liberation imagemagick librsvg2-bin libxml2-utils python3 python3-numpy python3-pil shellcheck \
+    && rm -rf /var/lib/apt/lists/*
 
 # CI DOS tier: the toolchain for building MS-DOS programs written in Rust and C, on the Rust tier.
 # Published as ghcr.io/liminal-hq/ci-dos. DJGPP (the cross-compiler and its C library), DOSBox Staging (to run programs
